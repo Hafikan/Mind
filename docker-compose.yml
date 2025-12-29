@@ -1,0 +1,33 @@
+services:
+  django-web:
+    
+    build: . 
+    ports:
+      - "8000:8000"
+    command: python3 manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    healthcheck:
+      interval: 30s
+      timeout : 10s 
+      retries : 3 
+      start_period: 40s 
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000"]
+
+  
+  psql-db:
+    image: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - psql_volume:/var/lib/postgresql
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_USER: cerberus
+      POSTGRES_PASSWORD: cerberus
+      POSTGRES_DB: default_database
+
+
+volumes:
+  psql_volume:
