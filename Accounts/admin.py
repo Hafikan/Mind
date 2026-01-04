@@ -15,3 +15,20 @@ class CustomUserAdmin(UserAdmin):
         "username",
         "is_superuser"
     ]
+
+    list_filter = [
+        "is_active",
+        "is_superuser"
+    ]
+    
+    search_fields = [
+        "email",
+        "first_name",
+        "username"
+    ]
+
+    ordering = [
+        "-date_joined"
+        ]
+
+admin.site.register(CustomUser, CustomUserAdmin)

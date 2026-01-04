@@ -4,15 +4,18 @@ from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = get_user_model()
-        fields: (
-            "E-Mail",
-            "Username",
-            "Avatar",
+        fields= (
+            "email",
+            "username",
+            "is_staff",
+            "is_active"
         )
 
 
 class CustomUserChangeForm(UserChangeForm):
     class Meta:
-        fields: (
-            "Avatar"
-        )
+        model = get_user_model()
+        fields = (
+            "email",
+            "username"
+            )
