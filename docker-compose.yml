@@ -1,0 +1,32 @@
+services:
+  postgresql-database:
+
+    image: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - psql_volume:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: "mind-db"
+      POSTGRES_USER: "cerberus"
+      POSTGRES_PASSWORD: "cerberus"
+
+  api-provider:
+    build: .
+    ports: 
+      - "8080:8080"
+    command: ["python3","manage.py","runserver","0.0.0.0:8080"]
+    volumes:
+      - ./Mind:/code
+    healthcheck:
+      test: ["CMD","curl","--fail","http://127.0.0.1:8080"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - postgresql-database
+
+volumes:
+  psql_volume:
