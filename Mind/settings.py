@@ -82,7 +82,7 @@ DATABASES = {
         "NAME": "default_database",
         "USER": "cerberus",
         "PASSWORD": "cerberus",
-        "HOST":"psql-db",
+        "HOST":"postgresql-database",
         "PORT": 5432
     }
 }

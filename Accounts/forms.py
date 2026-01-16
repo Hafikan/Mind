@@ -7,8 +7,7 @@ class CustomUserCreationForm(UserCreationForm):
         fields= (
             "email",
             "username",
-            "is_staff",
-            "is_active"
+            
         )
 
 
