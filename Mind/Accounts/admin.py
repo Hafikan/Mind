@@ -1,13 +1,13 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
-from .forms import CustomUserChangeForm, CustomUserCreationForm
+from .forms import AppUserChangeForm, AppUserCreationForm
 
 AppUser = get_user_model()
 
 class CustomUserAdmin(UserAdmin):
-    add_form = CustomUserCreationForm  # Yeni kullanıcı ekleme formu
-    form = CustomUserChangeForm        # Mevcut kullanıcıları düzenleme formu
+    add_form = AppUserCreationForm    # Yeni kullanıcı ekleme formu
+    form = AppUserChangeForm          # Mevcut kullanıcıları düzenleme formu
     model = AppUser                    # Uygulamadaki auth usera bağla
     
 
@@ -15,6 +15,7 @@ class CustomUserAdmin(UserAdmin):
     list_display = (
         "email",
         # varsa full_name (custom method)
+        "full_name",
         "is_staff",
         "username",
         "date_joined",
@@ -72,6 +73,7 @@ class CustomUserAdmin(UserAdmin):
         (None,{
             'classes': ('wide',),
             'fields': (
+                'username',
                 'email',
                 'first_name',
                 'last_name',
@@ -81,6 +83,21 @@ class CustomUserAdmin(UserAdmin):
             )
         }),
     )
+
+    # ***********************************
+    # Custom Actions
+    # ***********************************
+    actions = ['activate_users']
+
+    @admin.display(description="Name Surname", ordering="first_name")
+    def full_name(self, object):
+        return f"{object.first_name, object.last_name}".strip()
+
+
+    @admin.action(description="Activate selected users")
+    def activate_users(self, request, queryset):
+        count = queryset.update(is_active=True)
+        self.message_user(request, f"{count} user activated")
     
 
 admin.site.register(AppUser, CustomUserAdmin)
