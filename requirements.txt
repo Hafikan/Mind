@@ -1,6 +1,7 @@
 asgiref==3.11.0
 Django==6.0.1
 django-phonenumber-field==8.4.0
+djangorestframework==3.16.1
 phonenumberslite==9.0.21
 pillow==12.1.0
 psycopg2==2.9.11

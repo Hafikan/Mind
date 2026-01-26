@@ -2,9 +2,11 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 from .forms import AppUserChangeForm, AppUserCreationForm
-
+from .models import UserProfile
 AppUser = get_user_model()
-
+class ProfileInline(admin.StackedInline):
+    model = UserProfile
+    fields = ['avatar', 'phone']
 class CustomUserAdmin(UserAdmin):
     add_form = AppUserCreationForm    # Yeni kullanıcı ekleme formu
     form = AppUserChangeForm          # Mevcut kullanıcıları düzenleme formu
@@ -52,7 +54,7 @@ class CustomUserAdmin(UserAdmin):
         
         #Grup 2, Personal Informations
         ('Personal Informations',{
-            'fields': ('first_name', 'last_name', 'phone')
+            'fields': ('first_name', 'last_name', )
         }),
 
         #Grup 3, Permissions
@@ -77,7 +79,7 @@ class CustomUserAdmin(UserAdmin):
                 'email',
                 'first_name',
                 'last_name',
-                'phone',
+                
                 'password1',
                 'password2',
             )
@@ -89,6 +91,8 @@ class CustomUserAdmin(UserAdmin):
     # ***********************************
     actions = ['activate_users']
 
+
+    inlines = [ ProfileInline ]
     @admin.display(description="Name Surname", ordering="first_name")
     def full_name(self, object):
         return f"{object.first_name, object.last_name}".strip()
@@ -100,4 +104,6 @@ class CustomUserAdmin(UserAdmin):
         self.message_user(request, f"{count} user activated")
     
 
+
 admin.site.register(AppUser, CustomUserAdmin)
+admin.site.register(UserProfile)
