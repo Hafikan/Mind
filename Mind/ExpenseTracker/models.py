@@ -1,0 +1,68 @@
+from django.db import models
+from django.contrib.auth import get_user_model
+AppUser = get_user_model()
+# Create your models here.
+
+class ExpenseCategory(models.Model):
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="category")
+    name = models.CharField(max_length=128)
+    color= models.CharField(max_length=7,blank=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user","name")
+
+    def __str__(self):
+        return self.name
+
+class Expense(models.Model):
+    user = models.ForeignKey(AppUser, related_name="expenses", on_delete=models.CASCADE)
+    description = models.CharField(max_length=255)
+    expected_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    actual_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True,)
+    category = models.ForeignKey(ExpenseCategory,on_delete=models.CASCADE, related_name="expense_category")
+    pay_day = models.DateField(verbose_name="Pay_Day")
+    notes = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.description}-{self.actual_amount}"
+
+    class Meta:
+        verbose_name="Expense"
+        verbose_name_plural = "Expenses"
+
+
+class Banks(models.Model):
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="bank_name")
+    name = models.CharField(verbose_name="Bank_Name",max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+    logo = models.ImageField(verbose_name="Bank_Logo",upload_to="bank_logo")
+
+    class Meta:
+        unique_together = ("user","name")
+
+    def __str__(self):
+        return self.name
+
+class Debts(models.Model):
+    user = models.ForeignKey(AppUser, related_name="debt", on_delete=models.CASCADE)
+    total_debt = models.DecimalField(max_digits=10,decimal_places=2)
+    min_payment_coeff = models.DecimalField(max_digits=3, decimal_places=2)
+    bank = models.ForeignKey(Banks, on_delete = models.RESTRICT, verbose_name="bank") 
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    cutoff_date = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ("user","total_debt", "bank")
+
+class Credits(models.Model):
+    user = models.ForeignKey(AppUser, related_name="credits", on_delete=models.CASCADE)
+    bank = models.OneToOneField(Banks, related_name="bank_debts", on_delete=models.RESTRICT)
+    total_debt = models.DecimalField(max_digits=10, decimal_places=2)
+    monthly_fixed_purchase = models.DecimalField(max_digits=10, decimal_places=2)
+    total_purchase = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    remaning_purchase = models.DecimalField(max_digits=3,decimal_places=0, blank=True, null=True)
+    cutoff_date = models.DateField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ("user","bank","total_debt")

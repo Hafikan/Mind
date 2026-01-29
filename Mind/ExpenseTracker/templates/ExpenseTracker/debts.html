@@ -1,0 +1,166 @@
+{% extends 'index.html' %}
+
+{% block title %}Debts - Mind{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Debts</h1>
+    <button class="btn btn-primary" id="addDebtBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Add Debt</span>
+    </button>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-icon debt-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20"></path>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Debt</span>
+            <span class="summary-value text-danger">$0.00</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon paid-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Paid</span>
+            <span class="summary-value text-success">$0.00</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon remaining-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Remaining</span>
+            <span class="summary-value">$0.00</span>
+        </div>
+    </div>
+</div>
+
+<!-- Debts Table -->
+<div class="card">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Bank</th>
+                    <th>Total Debt</th>
+                    <th>Min Payment</th>
+                    <th>Amount Paid</th>
+                    <th>Cutoff Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="empty-row">
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <path d="M12 2v20"></path>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            <p>No debts recorded</p>
+                            <span class="text-muted">Add a debt to start tracking payments</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Debt Modal -->
+<div class="modal-overlay" id="debtModalOverlay">
+    <div class="modal" id="debtModal">
+        <div class="modal-header">
+            <h2 class="modal-title">Add Debt</h2>
+            <button class="modal-close" id="closeDebtModal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="debtForm">
+                <div class="form-group">
+                    <label class="form-label">Bank</label>
+                    <select class="input-neon select-neon" required>
+                        <option value="">Select bank</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Total Debt</label>
+                        <input type="number" step="0.01" class="input-neon" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Min Payment Coefficient</label>
+                        <input type="number" step="0.01" max="1" class="input-neon" placeholder="0.03" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Amount Paid</label>
+                        <input type="number" step="0.01" class="input-neon" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cutoff Date</label>
+                        <input type="datetime-local" class="input-neon">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" id="cancelDebtBtn">Cancel</button>
+            <button class="btn btn-primary" type="submit" form="debtForm">Save Debt</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addBtn = document.getElementById('addDebtBtn');
+    const modal = document.getElementById('debtModal');
+    const overlay = document.getElementById('debtModalOverlay');
+    const closeBtn = document.getElementById('closeDebtModal');
+    const cancelBtn = document.getElementById('cancelDebtBtn');
+
+    function openModal() {
+        overlay.classList.add('active');
+        modal.classList.add('active');
+    }
+
+    function closeModal() {
+        overlay.classList.remove('active');
+        modal.classList.remove('active');
+    }
+
+    addBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeModal();
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends 'index.html' %}
+
+{% block title %}Expenses - Mind{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Expenses</h1>
+    <button class="btn btn-primary" id="addExpenseBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Add Expense</span>
+    </button>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-icon expense-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Expected</span>
+            <span class="summary-value">$0.00</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon actual-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Actual</span>
+            <span class="summary-value">$0.00</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon count-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Expenses</span>
+            <span class="summary-value">0</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar">
+    <div class="search-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" class="input-neon" placeholder="Search expenses...">
+    </div>
+    <select class="input-neon select-neon">
+        <option value="">All Categories</option>
+    </select>
+    <input type="month" class="input-neon">
+</div>
+
+<!-- Expenses Table -->
+<div class="card">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Expected</th>
+                    <th>Actual</th>
+                    <th>Pay Day</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="empty-row">
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                <line x1="1" y1="10" x2="23" y2="10"></line>
+                            </svg>
+                            <p>No expenses found</p>
+                            <span class="text-muted">Add your first expense to get started</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Expense Modal -->
+<div class="modal-overlay" id="expenseModalOverlay">
+    <div class="modal" id="expenseModal">
+        <div class="modal-header">
+            <h2 class="modal-title">Add Expense</h2>
+            <button class="modal-close" id="closeExpenseModal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="expenseForm">
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="input-neon" placeholder="Enter description" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Expected Amount</label>
+                        <input type="number" step="0.01" class="input-neon" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Actual Amount</label>
+                        <input type="number" step="0.01" class="input-neon" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="input-neon select-neon" required>
+                            <option value="">Select category</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Pay Day</label>
+                        <input type="date" class="input-neon" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="input-neon textarea-neon" rows="3" placeholder="Optional notes..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" id="cancelExpenseBtn">Cancel</button>
+            <button class="btn btn-primary" type="submit" form="expenseForm">Save Expense</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addBtn = document.getElementById('addExpenseBtn');
+    const modal = document.getElementById('expenseModal');
+    const overlay = document.getElementById('expenseModalOverlay');
+    const closeBtn = document.getElementById('closeExpenseModal');
+    const cancelBtn = document.getElementById('cancelExpenseBtn');
+
+    function openModal() {
+        overlay.classList.add('active');
+        modal.classList.add('active');
+    }
+
+    function closeModal() {
+        overlay.classList.remove('active');
+        modal.classList.remove('active');
+    }
+
+    addBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeModal();
+    });
+});
+</script>
+{% endblock %}

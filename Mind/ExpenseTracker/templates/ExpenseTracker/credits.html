@@ -1,0 +1,174 @@
+{% extends 'index.html' %}
+
+{% block title %}Credits - Mind{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Credits</h1>
+    <button class="btn btn-primary" id="addCreditBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Add Credit</span>
+    </button>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-icon credit-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Credit Debt</span>
+            <span class="summary-value text-danger">$0.00</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon monthly-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Monthly Fixed</span>
+            <span class="summary-value">$0.00</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon remaining-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="20" x2="12" y2="10"></line>
+                <line x1="18" y1="20" x2="18" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Remaining Purchases</span>
+            <span class="summary-value">0</span>
+        </div>
+    </div>
+</div>
+
+<!-- Credits Table -->
+<div class="card">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Bank</th>
+                    <th>Total Debt</th>
+                    <th>Monthly Fixed</th>
+                    <th>Total Purchase</th>
+                    <th>Remaining</th>
+                    <th>Cutoff Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="empty-row">
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                <line x1="1" y1="10" x2="23" y2="10"></line>
+                            </svg>
+                            <p>No credits recorded</p>
+                            <span class="text-muted">Add a credit to track your installments</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Credit Modal -->
+<div class="modal-overlay" id="creditModalOverlay">
+    <div class="modal" id="creditModal">
+        <div class="modal-header">
+            <h2 class="modal-title">Add Credit</h2>
+            <button class="modal-close" id="closeCreditModal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="creditForm">
+                <div class="form-group">
+                    <label class="form-label">Bank</label>
+                    <select class="input-neon select-neon" required>
+                        <option value="">Select bank</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Total Debt</label>
+                        <input type="number" step="0.01" class="input-neon" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Monthly Fixed Purchase</label>
+                        <input type="number" step="0.01" class="input-neon" placeholder="0.00" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Total Purchase</label>
+                        <input type="number" step="0.01" class="input-neon" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Remaining Purchases</label>
+                        <input type="number" class="input-neon" placeholder="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cutoff Date</label>
+                    <input type="date" class="input-neon">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" id="cancelCreditBtn">Cancel</button>
+            <button class="btn btn-primary" type="submit" form="creditForm">Save Credit</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addBtn = document.getElementById('addCreditBtn');
+    const modal = document.getElementById('creditModal');
+    const overlay = document.getElementById('creditModalOverlay');
+    const closeBtn = document.getElementById('closeCreditModal');
+    const cancelBtn = document.getElementById('cancelCreditBtn');
+
+    function openModal() {
+        overlay.classList.add('active');
+        modal.classList.add('active');
+    }
+
+    function closeModal() {
+        overlay.classList.remove('active');
+        modal.classList.remove('active');
+    }
+
+    addBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeModal();
+    });
+});
+</script>
+{% endblock %}

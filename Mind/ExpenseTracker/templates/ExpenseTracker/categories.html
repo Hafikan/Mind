@@ -1,0 +1,259 @@
+{% extends 'index.html' %}
+
+{% block title %}Categories - Mind{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Expense Categories</h1>
+    <button class="btn btn-primary" id="addCategoryBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Add Category</span>
+    </button>
+</div>
+
+<!-- Categories Grid -->
+<div class="categories-grid" id="categoriesGrid">
+    <!-- Kategoriler buraya JS ile eklenecek -->
+</div>
+
+<!-- Empty State (shown when no categories) -->
+<div class="empty-state-container" id="emptyState" style="display: none;">
+    <div class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+        </svg>
+        <h3>No Categories Yet</h3>
+        <p class="text-muted">Create your first category to organize your expenses</p>
+        <button class="btn btn-primary mt-24" id="emptyAddBtn">Create Category</button>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal-overlay" id="categoryModalOverlay">
+    <div class="modal modal-sm" id="categoryModal">
+        <div class="modal-header">
+            <h2 class="modal-title">Add Category</h2>
+            <button class="modal-close" id="closeCategoryModal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="categoryForm">
+                <div class="form-group">
+                    <label class="form-label">Category Name</label>
+                    <input type="text" name="name" id="categoryName" class="input-neon" placeholder="e.g., Food, Transport, Bills" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Color</label>
+                    <div class="color-picker">
+                        <input type="color" name="color" id="categoryColor" value="#FFC107" class="color-input">
+                        <span class="color-preview" id="colorPreview"></span>
+                        <input type="text" class="input-neon color-text" id="colorText" value="#FFC107" maxlength="7">
+                    </div>
+                </div>
+                <div id="formError" class="form-error" style="display: none;"></div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" id="cancelCategoryBtn">Cancel</button>
+            <button class="btn btn-primary" type="submit" form="categoryForm" id="submitBtn">Save Category</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const API_URL = '/tracker/api/categories/';
+
+    // DOM Elements
+    const addBtn = document.getElementById('addCategoryBtn');
+    const emptyAddBtn = document.getElementById('emptyAddBtn');
+    const modal = document.getElementById('categoryModal');
+    const overlay = document.getElementById('categoryModalOverlay');
+    const closeBtn = document.getElementById('closeCategoryModal');
+    const cancelBtn = document.getElementById('cancelCategoryBtn');
+    const form = document.getElementById('categoryForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const colorInput = document.getElementById('categoryColor');
+    const colorText = document.getElementById('colorText');
+    const colorPreview = document.getElementById('colorPreview');
+    const categoriesGrid = document.getElementById('categoriesGrid');
+    const emptyState = document.getElementById('emptyState');
+    const formError = document.getElementById('formError');
+
+    // CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Modal functions
+    function openModal() {
+        overlay.classList.add('active');
+        modal.classList.add('active');
+        formError.style.display = 'none';
+    }
+
+    function closeModal() {
+        overlay.classList.remove('active');
+        modal.classList.remove('active');
+        form.reset();
+        colorInput.value = '#FFC107';
+        colorText.value = '#FFC107';
+        colorPreview.style.backgroundColor = '#FFC107';
+        formError.style.display = 'none';
+    }
+
+    // Event listeners for modal
+    [addBtn, emptyAddBtn].forEach(el => {
+        if (el) el.addEventListener('click', openModal);
+    });
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeModal();
+    });
+
+    // Color picker sync
+    colorInput.addEventListener('input', function() {
+        colorPreview.style.backgroundColor = this.value;
+        colorText.value = this.value;
+    });
+    colorText.addEventListener('input', function() {
+        if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+            colorInput.value = this.value;
+            colorPreview.style.backgroundColor = this.value;
+        }
+    });
+    colorPreview.style.backgroundColor = colorInput.value;
+
+    // Render categories
+    function renderCategories(categories) {
+        // Add card'ı temizle ve yeniden oluştur
+        categoriesGrid.innerHTML = '';
+
+        // Add New Category card (her zaman ilk sırada)
+        const addCard = document.createElement('div');
+        addCard.className = 'category-card empty-card';
+        addCard.id = 'addCategoryCard';
+        addCard.innerHTML = `
+            <div class="category-add-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </div>
+            <span>Add New Category</span>
+        `;
+        addCard.addEventListener('click', openModal);
+        categoriesGrid.appendChild(addCard);
+
+        // Kategorileri ekle
+        categories.forEach(cat => {
+            const card = document.createElement('div');
+            card.className = 'category-card';
+            card.dataset.id = cat.id;
+            card.innerHTML = `
+                <div class="category-color-badge" style="background-color: ${cat.color || '#FFC107'}"></div>
+                <span class="category-name">${cat.name}</span>
+            `;
+            categoriesGrid.appendChild(card);
+        });
+
+        // Empty state kontrolu
+        if (categories.length === 0) {
+            emptyState.style.display = 'flex';
+        } else {
+            emptyState.style.display = 'none';
+        }
+    }
+
+    // Fetch categories (GET)
+    async function loadCategories() {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                renderCategories(data);
+            } else {
+                console.error('Failed to load categories');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    // Create category (POST)
+    async function createCategory(name, color) {
+        try {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ name, color })
+            });
+
+            if (response.ok) {
+                closeModal();
+                loadCategories(); // Listeyi yenile
+            } else {
+                const errorData = await response.json();
+                formError.textContent = errorData.name?.[0] || errorData.detail || 'An error occurred';
+                formError.style.display = 'block';
+            }
+        } catch (error) {
+            formError.textContent = 'Network error. Please try again.';
+            formError.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save Category';
+        }
+    }
+
+    // Form submit
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('categoryName').value.trim();
+        const color = colorInput.value;
+
+        if (name) {
+            createCategory(name, color);
+        }
+    });
+
+    // Sayfa yuklendiginde kategorileri cek
+    loadCategories();
+});
+</script>
+{% endblock %}
