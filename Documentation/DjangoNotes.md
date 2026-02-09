@@ -20,3 +20,8 @@ A user model can be both created and edited within the Django admin. So we'll ne
 
 > **Form initialization** 
 > Meta class model için statik tanımlamalar yapar.__init__ ise runtime da ve miras alınan sınıfda değişiklik yapar.
+
+
+# Nested Serializer & Flat Serializer
+Bir modelin related olduğu modelini kendi içinde başka bir serializer ile birlikte döndürmeye yarar. yani json içinde diğer modeller de olur. Veri derinleştikçe poerformans problemleri ortaya çıkabilir. çok ilişkili yapılarda json okunabilirliği azalır. 
+ikişki modelleri tek seviyede çekersen. yani nested yerine tek obje içine sour ile ilişkisini düzleştirirsin.

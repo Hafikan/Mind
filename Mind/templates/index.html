@@ -54,6 +54,77 @@
                 <span class="item-text">Dashboard</span>
             </a>
 
+            <!-- Expense Tracker Menu -->
+            <div class="sidebar-menu">
+                <button class="sidebar-item sidebar-menu-trigger" id="expenseTrackerTrigger">
+                    <span class="item-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                    </span>
+                    <span class="item-text">Expense Tracker</span>
+                    <span class="menu-chevron">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </span>
+                </button>
+                <div class="sidebar-submenu" id="expenseTrackerSubmenu">
+                    <a href="#" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                <line x1="1" y1="10" x2="23" y2="10"></line>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Expenses</span>
+                    </a>
+                    <a href="{% url 'expense_tracker:categories' %}" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Categories</span>
+                    </a>
+                    <a href="#" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 21h18"></path>
+                                <path d="M3 10h18"></path>
+                                <path d="M5 6l7-3 7 3"></path>
+                                <path d="M4 10v11"></path>
+                                <path d="M20 10v11"></path>
+                                <path d="M8 14v3"></path>
+                                <path d="M12 14v3"></path>
+                                <path d="M16 14v3"></path>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Banks</span>
+                    </a>
+                    <a href="#" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2v20"></path>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Debts</span>
+                    </a>
+                    <a href="#" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                <line x1="1" y1="10" x2="23" y2="10"></line>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Credits</span>
+                    </a>
+                </div>
+            </div>
+
             <a href="#" class="sidebar-item">
                 <span class="item-icon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

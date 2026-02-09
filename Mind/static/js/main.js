@@ -2,11 +2,38 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     // Handle sidebar item clicks
-    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    const sidebarItems = document.querySelectorAll('.sidebar-item:not(.sidebar-menu-trigger)');
     sidebarItems.forEach(item => {
         item.addEventListener('click', function(e) {
             sidebarItems.forEach(i => i.classList.remove('active'));
             this.classList.add('active');
+        });
+    });
+
+    // Handle sidebar menu (collapsible) toggle
+    const menuTriggers = document.querySelectorAll('.sidebar-menu-trigger');
+    menuTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            const menu = this.closest('.sidebar-menu');
+            menu.classList.toggle('open');
+        });
+    });
+
+    // Handle sidebar subitem clicks
+    const subItems = document.querySelectorAll('.sidebar-subitem');
+    subItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            // Remove active from all items
+            sidebarItems.forEach(i => i.classList.remove('active'));
+            subItems.forEach(i => i.classList.remove('active'));
+            // Add active to clicked subitem
+            this.classList.add('active');
+            // Keep parent menu trigger highlighted
+            const parentMenu = this.closest('.sidebar-menu');
+            if (parentMenu) {
+                parentMenu.querySelector('.sidebar-menu-trigger').classList.add('active');
+            }
         });
     });
 

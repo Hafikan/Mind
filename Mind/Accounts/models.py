@@ -10,7 +10,7 @@ class AppUser(AbstractUser):
 
 class UserProfile(models.Model):
     appuser = get_user_model()
-    user = models.OneToOneField(appuser,on_delete=models.CASCADE)
+    user = models.OneToOneField(appuser,on_delete=models.CASCADE, related_name='profile')
     avatar = models.ImageField(verbose_name="user_avatar", upload_to = 'profile_avatars')
     phone = PhoneNumberField(verbose_name="Phone Number",blank=True)
     
