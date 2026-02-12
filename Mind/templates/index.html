@@ -71,7 +71,7 @@
                     </span>
                 </button>
                 <div class="sidebar-submenu" id="expenseTrackerSubmenu">
-                    <a href="#" class="sidebar-subitem">
+                    <a href="{% url 'expense_tracker:expenses' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
@@ -89,7 +89,7 @@
                         </span>
                         <span class="subitem-text">Categories</span>
                     </a>
-                    <a href="#" class="sidebar-subitem">
+                    <a href="{% url 'expense_tracker:banks' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M3 21h18"></path>
@@ -104,7 +104,7 @@
                         </span>
                         <span class="subitem-text">Banks</span>
                     </a>
-                    <a href="#" class="sidebar-subitem">
+                    <a href="{% url 'expense_tracker:debts' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 2v20"></path>
@@ -113,7 +113,7 @@
                         </span>
                         <span class="subitem-text">Debts</span>
                     </a>
-                    <a href="#" class="sidebar-subitem">
+                    <a href="{% url 'expense_tracker:credits' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>

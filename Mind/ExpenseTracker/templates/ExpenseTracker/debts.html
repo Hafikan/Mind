@@ -25,7 +25,7 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Total Debt</span>
-            <span class="summary-value text-danger">$0.00</span>
+            <span class="summary-value text-danger" id="summaryTotalDebt">$0.00</span>
         </div>
     </div>
     <div class="summary-card">
@@ -37,7 +37,7 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Total Paid</span>
-            <span class="summary-value text-success">$0.00</span>
+            <span class="summary-value text-success" id="summaryTotalPaid">$0.00</span>
         </div>
     </div>
     <div class="summary-card">
@@ -49,7 +49,7 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Remaining</span>
-            <span class="summary-value">$0.00</span>
+            <span class="summary-value" id="summaryRemaining">$0.00</span>
         </div>
     </div>
 </div>
@@ -86,7 +86,7 @@
     </div>
 </div>
 
-<!-- Add Debt Modal -->
+<!-- Add/Edit Debt Modal -->
 <div class="modal-overlay" id="debtModalOverlay">
     <div class="modal" id="debtModal">
         <div class="modal-header">
@@ -102,28 +102,28 @@
             <form id="debtForm">
                 <div class="form-group">
                     <label class="form-label">Bank</label>
-                    <select class="input-neon select-neon" required>
+                    <select name="bank" class="input-neon select-neon" required>
                         <option value="">Select bank</option>
                     </select>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Total Debt</label>
-                        <input type="number" step="0.01" class="input-neon" placeholder="0.00" required>
+                        <input type="number" step="0.01" name="total_debt" class="input-neon" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Min Payment Coefficient</label>
-                        <input type="number" step="0.01" max="1" class="input-neon" placeholder="0.03" required>
+                        <input type="number" step="0.01" max="1" name="min_payment_coeff" class="input-neon" placeholder="0.03" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Amount Paid</label>
-                        <input type="number" step="0.01" class="input-neon" placeholder="0.00">
+                        <input type="number" step="0.01" name="amount_paid" class="input-neon" placeholder="0.00">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Cutoff Date</label>
-                        <input type="datetime-local" class="input-neon">
+                        <input type="date" name="cutoff_date" class="input-neon">
                     </div>
                 </div>
             </form>
@@ -144,8 +144,137 @@ document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.getElementById('debtModalOverlay');
     const closeBtn = document.getElementById('closeDebtModal');
     const cancelBtn = document.getElementById('cancelDebtBtn');
+    const bankSelect = modal.querySelector('select[name="bank"]');
+    const tableBody = document.querySelector('.data-table tbody');
+    const modalTitle = modal.querySelector('.modal-title');
+    const debtForm = document.getElementById('debtForm');
 
-    function openModal() {
+    let editingId = null;
+
+    const emptyRowHTML = `
+        <tr class="empty-row">
+            <td colspan="6">
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <path d="M12 2v20"></path>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    <p>No debts recorded</p>
+                    <span class="text-muted">Add a debt to start tracking payments</span>
+                </div>
+            </td>
+        </tr>
+    `;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    async function loadDebts() {
+        try {
+            const response = await fetch('/tracker/api/debts/');
+            if (response.ok) {
+                const debts = await response.json();
+                renderDebts(debts);
+                updateSummary(debts);
+            }
+        } catch (error) {
+            console.error('Failed to load debts:', error);
+        }
+    }
+
+    function updateSummary(debts) {
+        let totalDebt = 0;
+        let totalPaid = 0;
+        debts.forEach(d => {
+            totalDebt += parseFloat(d.total_debt || 0);
+            totalPaid += parseFloat(d.amount_paid || 0);
+        });
+        document.getElementById('summaryTotalDebt').textContent = `$${totalDebt.toFixed(2)}`;
+        document.getElementById('summaryTotalPaid').textContent = `$${totalPaid.toFixed(2)}`;
+        document.getElementById('summaryRemaining').textContent = `$${(totalDebt - totalPaid).toFixed(2)}`;
+    }
+
+    function renderDebts(debts) {
+        if (debts.length === 0) {
+            tableBody.innerHTML = emptyRowHTML;
+            return;
+        }
+
+        tableBody.innerHTML = debts.map(debt => {
+            const minPayment = (parseFloat(debt.total_debt) * parseFloat(debt.min_payment_coeff)).toFixed(2);
+            return `
+            <tr data-id="${debt.id}">
+                <td>${debt.bank_name || '-'}</td>
+                <td>$${parseFloat(debt.total_debt).toFixed(2)}</td>
+                <td>$${minPayment}</td>
+                <td>$${parseFloat(debt.amount_paid || 0).toFixed(2)}</td>
+                <td>${debt.cutoff_date || '-'}</td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn edit-btn" title="Edit">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete delete-btn" title="Delete">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    async function loadBanks() {
+        try {
+            const response = await fetch('/tracker/api/banks/');
+            if (response.ok) {
+                const banks = await response.json();
+                bankSelect.innerHTML = '<option value="">Select bank</option>';
+                banks.forEach(bank => {
+                    const option = document.createElement('option');
+                    option.value = bank.id;
+                    option.textContent = bank.name;
+                    bankSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load banks:', error);
+        }
+    }
+
+    async function openModal(debt = null) {
+        await loadBanks();
+        editingId = debt ? debt.id : null;
+        modalTitle.textContent = debt ? 'Edit Debt' : 'Add Debt';
+
+        if (debt) {
+            debtForm.querySelector('[name="bank"]').value = debt.bank;
+            debtForm.querySelector('[name="total_debt"]').value = debt.total_debt;
+            debtForm.querySelector('[name="min_payment_coeff"]').value = debt.min_payment_coeff;
+            debtForm.querySelector('[name="amount_paid"]').value = debt.amount_paid || '';
+            debtForm.querySelector('[name="cutoff_date"]').value = debt.cutoff_date || '';
+        } else {
+            debtForm.reset();
+        }
+
         overlay.classList.add('active');
         modal.classList.add('active');
     }
@@ -153,14 +282,98 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeModal() {
         overlay.classList.remove('active');
         modal.classList.remove('active');
+        editingId = null;
     }
 
-    addBtn.addEventListener('click', openModal);
+    async function saveDebt(data) {
+        try {
+            const url = editingId
+                ? `/tracker/api/debts/${editingId}/`
+                : '/tracker/api/debts/';
+            const method = editingId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                closeModal();
+                debtForm.reset();
+                loadDebts();
+            } else {
+                const error = await response.json();
+                alert('Failed to save: ' + JSON.stringify(error));
+            }
+        } catch (error) {
+            console.error('Failed to save debt:', error);
+        }
+    }
+
+    async function deleteDebt(id) {
+        if (!confirm('Are you sure you want to delete this debt?')) return;
+
+        try {
+            const response = await fetch(`/tracker/api/debts/${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            if (response.ok) {
+                loadDebts();
+            } else {
+                alert('Failed to delete debt');
+            }
+        } catch (error) {
+            console.error('Failed to delete debt:', error);
+        }
+    }
+
+    debtForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(debtForm);
+        const data = {
+            bank: formData.get('bank'),
+            total_debt: formData.get('total_debt'),
+            min_payment_coeff: formData.get('min_payment_coeff'),
+            amount_paid: formData.get('amount_paid') || null,
+            cutoff_date: formData.get('cutoff_date') || null
+        };
+        saveDebt(data);
+    });
+
+    addBtn.addEventListener('click', () => openModal());
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     overlay.addEventListener('click', function(e) {
         if (e.target === overlay) closeModal();
     });
+
+    tableBody.addEventListener('click', async function(e) {
+        const row = e.target.closest('tr');
+        if (!row) return;
+        const id = row.dataset.id;
+
+        const editBtn = e.target.closest('.edit-btn');
+        if (editBtn) {
+            const response = await fetch(`/tracker/api/debts/${id}/`);
+            if (response.ok) {
+                const debt = await response.json();
+                openModal(debt);
+            }
+        }
+
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) {
+            deleteDebt(id);
+        }
+    });
+
+    loadDebts();
 });
 </script>
 {% endblock %}

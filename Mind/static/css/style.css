@@ -278,6 +278,10 @@ body {
     max-height: 300px;
 }
 
+.sidebar:not(:hover):not(.expanded) .sidebar-submenu {
+    max-height: 0;
+}
+
 .sidebar-subitem {
     display: flex;
     align-items: center;
@@ -1239,6 +1243,19 @@ button.popup-nav-item {
 .empty-card:hover .bank-add-icon {
     background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 193, 7, 0.05));
     box-shadow: var(--neon-glow);
+}
+
+/* Bank Logo */
+.bank-logo {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    height: 64px;
+    min-height: 64px;
+    max-height: 64px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 12px;
 }
 
 /* Category Card Content */

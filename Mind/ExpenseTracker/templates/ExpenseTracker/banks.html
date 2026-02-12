@@ -63,7 +63,7 @@
             <form id="bankForm">
                 <div class="form-group">
                     <label class="form-label">Bank Name</label>
-                    <input type="text" class="input-neon" placeholder="e.g., Chase, Bank of America" required>
+                    <input type="text" name="name" id="bankName" class="input-neon" placeholder="e.g., Chase, Bank of America" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Bank Logo</label>
@@ -93,6 +93,9 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const API_URL = '/tracker/api/banks/';
+
+    // DOM Elements
     const addBtn = document.getElementById('addBankBtn');
     const addCard = document.getElementById('addBankCard');
     const emptyAddBtn = document.getElementById('emptyAddBtn');
@@ -100,9 +103,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.getElementById('bankModalOverlay');
     const closeBtn = document.getElementById('closeBankModal');
     const cancelBtn = document.getElementById('cancelBankBtn');
+    const form = document.getElementById('bankForm');
+    const submitBtn = form.querySelector('button[type="submit"]') || document.querySelector('.modal-footer .btn-primary');
     const fileInput = document.getElementById('bankLogo');
     const preview = document.getElementById('logoPreview');
+    const banksGrid = document.querySelector('.banks-grid');
+    const emptyState = document.getElementById('emptyState');
 
+    // CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Modal functions
     function openModal() {
         overlay.classList.add('active');
         modal.classList.add('active');
@@ -111,8 +136,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeModal() {
         overlay.classList.remove('active');
         modal.classList.remove('active');
+        form.reset();
+        preview.innerHTML = '';
+        preview.classList.remove('has-preview');
     }
 
+    // Event listeners for modal
     [addBtn, addCard, emptyAddBtn].forEach(el => {
         if (el) el.addEventListener('click', openModal);
     });
@@ -134,6 +163,109 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.readAsDataURL(file);
         }
     });
+
+    // Render banks
+    function renderBanks(banks) {
+        banksGrid.innerHTML = '';
+
+        // Add New Bank card
+        const addCardEl = document.createElement('div');
+        addCardEl.className = 'bank-card empty-card';
+        addCardEl.innerHTML = `
+            <div class="bank-add-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </div>
+            <span>Add New Bank</span>
+        `;
+        addCardEl.addEventListener('click', openModal);
+        banksGrid.appendChild(addCardEl);
+
+        // Bank cards
+        banks.forEach(bank => {
+            const card = document.createElement('div');
+            card.className = 'bank-card';
+            card.dataset.id = bank.id;
+            card.innerHTML = `
+                ${bank.logo ? `<img src="${bank.logo}" alt="${bank.name}" class="bank-logo">` : ''}
+                <span class="bank-name">${bank.name}</span>
+            `;
+            banksGrid.appendChild(card);
+        });
+
+        // Empty state
+        if (banks.length === 0) {
+            emptyState.style.display = 'flex';
+        } else {
+            emptyState.style.display = 'none';
+        }
+    }
+
+    // Fetch banks (GET)
+    async function loadBanks() {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                renderBanks(data);
+            }
+        } catch (error) {
+            console.error('Error loading banks:', error);
+        }
+    }
+
+    // Create bank (POST)
+    async function createBank(formData) {
+        try {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                closeModal();
+                loadBanks();
+            } else {
+                const errorData = await response.json();
+                console.error('Error:', errorData);
+                alert(errorData.name?.[0] || errorData.detail || 'An error occurred');
+            }
+        } catch (error) {
+            console.error('Network error:', error);
+            alert('Network error. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save Bank';
+        }
+    }
+
+    // Form submit
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('bankName').value.trim();
+        if (!name) return;
+
+        const formData = new FormData();
+        formData.append('name', name);
+        if (fileInput.files[0]) {
+            formData.append('logo', fileInput.files[0]);
+        }
+        createBank(formData);
+    });
+
+    // Load banks on page load
+    loadBanks();
 });
 </script>
 {% endblock %}

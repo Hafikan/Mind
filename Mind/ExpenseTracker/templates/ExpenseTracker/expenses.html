@@ -63,12 +63,12 @@
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" class="input-neon" placeholder="Search expenses...">
+        <input type="text" id="searchInput" class="input-neon" placeholder="Search expenses...">
     </div>
-    <select class="input-neon select-neon">
+    <select id="filterCategory" class="input-neon select-neon">
         <option value="">All Categories</option>
     </select>
-    <input type="month" class="input-neon">
+    <input type="month" id="filterMonth" class="input-neon">
 </div>
 
 <!-- Expenses Table -->
@@ -119,33 +119,33 @@
             <form id="expenseForm">
                 <div class="form-group">
                     <label class="form-label">Description</label>
-                    <input type="text" class="input-neon" placeholder="Enter description" required>
+                    <input type="text" name="description" class="input-neon" placeholder="Enter description" required>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Expected Amount</label>
-                        <input type="number" step="0.01" class="input-neon" placeholder="0.00" required>
+                        <input type="number" step="0.01" name="expected_amount" class="input-neon" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Actual Amount</label>
-                        <input type="number" step="0.01" class="input-neon" placeholder="0.00">
+                        <input type="number" step="0.01" name="actual_amount" class="input-neon" placeholder="0.00">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Category</label>
-                        <select class="input-neon select-neon" required>
+                        <select name="category" class="input-neon select-neon" required>
                             <option value="">Select category</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Pay Day</label>
-                        <input type="date" class="input-neon" required>
+                        <input type="date" name="pay_day" class="input-neon" required>
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Notes</label>
-                    <textarea class="input-neon textarea-neon" rows="3" placeholder="Optional notes..."></textarea>
+                    <textarea name="notes" class="input-neon textarea-neon" rows="3" placeholder="Optional notes..."></textarea>
                 </div>
             </form>
         </div>
@@ -165,8 +165,165 @@ document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.getElementById('expenseModalOverlay');
     const closeBtn = document.getElementById('closeExpenseModal');
     const cancelBtn = document.getElementById('cancelExpenseBtn');
+    const categorySelect = modal.querySelector('select[name="category"]');
+    const tableBody = document.querySelector('.data-table tbody');
+    const summaryValues = document.querySelectorAll('.summary-value');
+    const modalTitle = modal.querySelector('.modal-title');
+    const searchInput = document.getElementById('searchInput');
+    const filterCategory = document.getElementById('filterCategory');
+    const filterMonth = document.getElementById('filterMonth');
 
-    function openModal() {
+    let editingId = null;
+    let allExpenses = [];
+
+    const emptyRowHTML = `
+        <tr class="empty-row">
+            <td colspan="6">
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                        <line x1="1" y1="10" x2="23" y2="10"></line>
+                    </svg>
+                    <p>No expenses found</p>
+                    <span class="text-muted">Add your first expense to get started</span>
+                </div>
+            </td>
+        </tr>
+    `;
+
+    function buildQueryParams() {
+        const params = new URLSearchParams();
+        const categoryId = filterCategory.value;
+        const monthValue = filterMonth.value;
+
+        if (categoryId) {
+            params.append('category', categoryId);
+        }
+        if (monthValue) {
+            const [year, month] = monthValue.split('-');
+            params.append('year', year);
+            params.append('month', month);
+        }
+        return params.toString();
+    }
+
+    async function loadExpenses() {
+        try {
+            const query = buildQueryParams();
+            const url = '/tracker/api/expenses/' + (query ? '?' + query : '');
+            const response = await fetch(url);
+            if (response.ok) {
+                allExpenses = await response.json();
+                applySearch();
+            }
+        } catch (error) {
+            console.error('Failed to load expenses:', error);
+        }
+    }
+
+    async function loadSummary() {
+        try {
+            const query = buildQueryParams();
+            const url = '/tracker/api/expenses/summary/' + (query ? '?' + query : '');
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                summaryValues[0].textContent = `$${parseFloat(data.total_expected).toFixed(2)}`;
+                summaryValues[1].textContent = `$${parseFloat(data.total_actual).toFixed(2)}`;
+                summaryValues[2].textContent = data.count;
+            }
+        } catch (error) {
+            console.error('Failed to load summary:', error);
+        }
+    }
+
+    function applySearch() {
+        const searchTerm = searchInput.value.toLowerCase();
+        let filtered = allExpenses;
+
+        if (searchTerm) {
+            filtered = filtered.filter(exp =>
+                exp.description.toLowerCase().includes(searchTerm) ||
+                (exp.notes && exp.notes.toLowerCase().includes(searchTerm))
+            );
+        }
+
+        renderExpenses(filtered);
+    }
+
+    function applyFilters() {
+        loadExpenses();
+        loadSummary();
+    }
+
+    function renderExpenses(expenses) {
+        if (expenses.length === 0) {
+            tableBody.innerHTML = emptyRowHTML;
+            return;
+        }
+
+        tableBody.innerHTML = expenses.map(exp => `
+            <tr data-id="${exp.id}">
+                <td>${exp.description}</td>
+                <td>${exp.category_name || '-'}</td>
+                <td>$${parseFloat(exp.expected_amount).toFixed(2)}</td>
+                <td>$${parseFloat(exp.actual_amount || 0).toFixed(2)}</td>
+                <td>${exp.pay_day}</td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn edit-btn" title="Edit">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete delete-btn" title="Delete">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function loadCategories() {
+        try {
+            const response = await fetch('/tracker/api/categories/');
+            if (response.ok) {
+                const categories = await response.json();
+                categorySelect.innerHTML = '<option value="">Select category</option>';
+                categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.id;
+                    option.textContent = cat.name;
+                    categorySelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load categories:', error);
+        }
+    }
+
+    async function openModal(expense = null) {
+        await loadCategories();
+        editingId = expense ? expense.id : null;
+        modalTitle.textContent = expense ? 'Edit Expense' : 'Add Expense';
+
+        const form = document.getElementById('expenseForm');
+        if (expense) {
+            form.querySelector('[name="description"]').value = expense.description;
+            form.querySelector('[name="expected_amount"]').value = expense.expected_amount;
+            form.querySelector('[name="actual_amount"]').value = expense.actual_amount || '';
+            form.querySelector('[name="category"]').value = expense.category;
+            form.querySelector('[name="pay_day"]').value = expense.pay_day;
+            form.querySelector('[name="notes"]').value = expense.notes || '';
+        } else {
+            form.reset();
+        }
+
         overlay.classList.add('active');
         modal.classList.add('active');
     }
@@ -174,14 +331,144 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeModal() {
         overlay.classList.remove('active');
         modal.classList.remove('active');
+        editingId = null;
     }
 
-    addBtn.addEventListener('click', openModal);
+    async function deleteExpense(id) {
+        if (!confirm('Are you sure you want to delete this expense?')) return;
+
+        try {
+            const response = await fetch(`/tracker/api/expenses/${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            if (response.ok) {
+                loadExpenses();
+            } else {
+                alert('Failed to delete expense');
+            }
+        } catch (error) {
+            console.error('Failed to delete expense:', error);
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const expenseForm = document.getElementById('expenseForm');
+
+    async function saveExpense(data) {
+        try {
+            const url = editingId
+                ? `/tracker/api/expenses/${editingId}/`
+                : '/tracker/api/expenses/';
+            const method = editingId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                closeModal();
+                expenseForm.reset();
+                loadExpenses();
+            } else {
+                const error = await response.json();
+                alert('Failed to save: ' + JSON.stringify(error));
+            }
+        } catch (error) {
+            console.error('Failed to save expense:', error);
+        }
+    }
+
+    expenseForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(expenseForm);
+        const data = {
+            description: formData.get('description'),
+            expected_amount: formData.get('expected_amount'),
+            actual_amount: formData.get('actual_amount') || null,
+            category: formData.get('category'),
+            pay_day: formData.get('pay_day'),
+            notes: formData.get('notes') || ''
+        };
+        saveExpense(data);
+    });
+
+    addBtn.addEventListener('click', () => openModal());
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     overlay.addEventListener('click', function(e) {
         if (e.target === overlay) closeModal();
     });
+
+    // Edit and Delete button handlers (event delegation)
+    tableBody.addEventListener('click', async function(e) {
+        const row = e.target.closest('tr');
+        if (!row) return;
+        const id = row.dataset.id;
+
+        const editBtn = e.target.closest('.edit-btn');
+        if (editBtn) {
+            const response = await fetch(`/tracker/api/expenses/${id}/`);
+            if (response.ok) {
+                const expense = await response.json();
+                openModal(expense);
+            }
+        }
+
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) {
+            deleteExpense(id);
+        }
+    });
+
+    // Filter event listeners
+    searchInput.addEventListener('input', applySearch);
+    filterCategory.addEventListener('change', applyFilters);
+    filterMonth.addEventListener('change', applyFilters);
+
+    // Load filter categories
+    async function loadFilterCategories() {
+        try {
+            const response = await fetch('/tracker/api/categories/');
+            if (response.ok) {
+                const categories = await response.json();
+                filterCategory.innerHTML = '<option value="">All Categories</option>';
+                categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.id;
+                    option.textContent = cat.name;
+                    filterCategory.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load filter categories:', error);
+        }
+    }
+
+    // Load on page load
+    loadFilterCategories();
+    loadExpenses();
+    loadSummary();
 });
 </script>
 {% endblock %}

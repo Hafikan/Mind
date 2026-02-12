@@ -50,7 +50,7 @@ class Debts(models.Model):
     min_payment_coeff = models.DecimalField(max_digits=3, decimal_places=2)
     bank = models.ForeignKey(Banks, on_delete = models.RESTRICT, verbose_name="bank") 
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    cutoff_date = models.DateTimeField(blank=True, null=True)
+    cutoff_date = models.DateField(blank=True, null=True)
 
     class Meta:
         unique_together = ("user","total_debt", "bank")
