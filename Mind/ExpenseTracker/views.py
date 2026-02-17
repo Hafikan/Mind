@@ -9,7 +9,7 @@ from .serializers import ShoppingSerializer
 from django.db import models as db_models
 from django.db.models import Sum, F, Case, When, BooleanField, DecimalField, Value
 from django.db.models.functions import Coalesce
-from .models import ExpenseCategory, Expense, Banks, Debts, Credits, Income, Shopping
+from .models import ExpenseCategory, Expense, Banks, Debts, Credits, CreditInstallment, Income, Shopping
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -105,7 +105,9 @@ class CreditsViewSet(ModelViewSet):
     serializer_class = CreditsSerializer
 
     def get_queryset(self):
-        queryset = Credits.objects.filter(user=self.request.user).select_related('bank')
+        queryset = Credits.objects.filter(
+            user=self.request.user
+        ).select_related('bank').prefetch_related('installments')
 
         month = self.request.query_params.get('month')
         year = self.request.query_params.get('year')
@@ -113,6 +115,23 @@ class CreditsViewSet(ModelViewSet):
             queryset = queryset.filter(cutoff_date__month=month, cutoff_date__year=year)
 
         return queryset
+
+    @action(detail=True, methods=['patch'], url_path='toggle-installment/(?P<installment_id>[0-9]+)')
+    def toggle_installment(self, request, pk=None, installment_id=None):
+        """Toggle is_paid for a specific installment"""
+        credit = self.get_object()
+        try:
+            installment = credit.installments.get(id=installment_id)
+        except CreditInstallment.DoesNotExist:
+            return Response({'error': 'Installment not found'}, status=404)
+
+        installment.is_paid = not installment.is_paid
+        installment.save()
+        return Response({
+            'id': installment.id,
+            'is_paid': installment.is_paid,
+            'installment_number': installment.installment_number,
+        })
 
     @action(detail=False, methods=['get'])
     def summary(self, request):
@@ -273,10 +292,54 @@ class DashboardSummaryView(APIView):
             total_debt=Sum('total_debt'),
             total_monthly=Sum('monthly_fixed_purchase'),
         )
+
+        # Calculate paid installments total for the selected month
+        installment_filter = {'credit__user': user, 'is_paid': True}
+        if month and year:
+            installment_filter['due_date__month'] = month
+            installment_filter['due_date__year'] = year
+        paid_installments_total = CreditInstallment.objects.filter(
+            **installment_filter
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
         credits_summary = {
             'total_debt': float(credits_agg['total_debt'] or 0),
-            'total_monthly': float(credits_agg['total_monthly'] or 0),
+            'total_monthly': float(paid_installments_total),
         }
+
+        # --- Credits by Bank (installments for selected month) ---
+        installment_qs = CreditInstallment.objects.filter(credit__user=user)
+        if month and year:
+            installment_qs = installment_qs.filter(
+                due_date__month=month, due_date__year=year
+            )
+        credits_by_bank_data = (
+            installment_qs
+            .values('credit__bank__name')
+            .annotate(
+                total_amount=Coalesce(Sum('amount'), Value(0, output_field=DecimalField())),
+                paid_amount=Coalesce(
+                    Sum(Case(
+                        When(is_paid=True, then='amount'),
+                        default=Value(0),
+                        output_field=DecimalField(),
+                    )),
+                    Value(0, output_field=DecimalField()),
+                ),
+                total_count=db_models.Count('id'),
+                paid_count=db_models.Count('id', filter=db_models.Q(is_paid=True)),
+            )
+        )
+        credits_by_bank = []
+        for row in credits_by_bank_data:
+            credits_by_bank.append({
+                'bank': row['credit__bank__name'],
+                'total_amount': float(row['total_amount']),
+                'paid_amount': float(row['paid_amount']),
+                'remaining_amount': float(row['total_amount']) - float(row['paid_amount']),
+                'total_count': row['total_count'],
+                'paid_count': row['paid_count'],
+            })
 
         # --- Income Summary ---
         income_qs = Income.objects.filter(user=user)
@@ -348,6 +411,7 @@ class DashboardSummaryView(APIView):
             'debts_summary': debts_summary,
             'debts_by_bank': debts_by_bank,
             'credits_summary': credits_summary,
+            'credits_by_bank': credits_by_bank,
             'income_summary': income_summary,
             'shopping_summary': shopping_summary,
             'monthly_trend': monthly_trend,

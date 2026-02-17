@@ -50,6 +50,52 @@
         font-size: 15px;
     }
 
+    #creditsByBankTable {
+        border-collapse: collapse;
+    }
+    #creditsByBankTable th {
+        text-align: left;
+        padding: 10px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    #creditsByBankTable td {
+        padding: 10px 12px;
+        font-size: 14px;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color);
+    }
+    #creditsByBankTable tr:last-child td {
+        border-bottom: none;
+    }
+    .credit-progress {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .credit-progress-bar {
+        flex: 1;
+        height: 6px;
+        background: var(--bg-primary);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .credit-progress-fill {
+        height: 100%;
+        background: #22c55e;
+        border-radius: 3px;
+        transition: width 0.3s;
+    }
+    .credit-progress-text {
+        font-size: 12px;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+
     @media (max-width: 900px) {
         .dashboard-grid {
             grid-template-columns: 1fr;
@@ -162,6 +208,28 @@
         <div class="chart-card-title">Debts by Bank</div>
         <div class="chart-container" id="debtsChartContainer">
             <canvas id="debtsChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-card-title">Credits by Bank</div>
+        <div id="creditsByBankContainer">
+            <table class="data-table" id="creditsByBankTable" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Bank</th>
+                        <th>Installments</th>
+                        <th>Paid</th>
+                        <th>Remaining</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4">
+                            <div class="no-data-message" style="height: 200px;">No credit data</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
     <div class="chart-card chart-card-full" style="grid-column: 1 / -1;">
@@ -559,6 +627,32 @@ function renderTrendChart(data) {
     });
 }
 
+function renderCreditsByBank(data) {
+    const tbody = document.querySelector('#creditsByBankTable tbody');
+    if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4"><div class="no-data-message" style="height: 200px;">No credit data</div></td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = data.map(row => {
+        const pct = row.total_count > 0 ? ((row.paid_count / row.total_count) * 100).toFixed(0) : 0;
+        return `
+        <tr>
+            <td><strong>${row.bank}</strong></td>
+            <td>
+                <div class="credit-progress">
+                    <div class="credit-progress-bar">
+                        <div class="credit-progress-fill" style="width: ${pct}%"></div>
+                    </div>
+                    <span class="credit-progress-text">${row.paid_count}/${row.total_count}</span>
+                </div>
+            </td>
+            <td style="color: #22c55e;">${fmt(row.paid_amount)}</td>
+            <td style="color: var(--text-muted);">${fmt(row.remaining_amount)}</td>
+        </tr>`;
+    }).join('');
+}
+
 async function loadDashboard() {
     const [year, month] = monthFilter.value.split('-');
     try {
@@ -588,10 +682,11 @@ async function loadDashboard() {
         netEl.className = 'summary-value ' + (net >= 0 ? 'text-success' : 'text-danger');
         netEl.textContent = (net < 0 ? '-' : '+') + fmt(Math.abs(net));
 
-        // Charts
+        // Charts & Tables
         renderExpensesChart(data.expenses_by_category, incomeTotal, cs.total_monthly, shoppingTotal, ds.total_paid);
         renderOverviewChart(incomeTotal, totalExp, ds.total_paid, cs.total_monthly, shoppingTotal);
         renderDebtsChart(data.debts_by_bank);
+        renderCreditsByBank(data.credits_by_bank);
         renderTrendChart(data.monthly_trend);
     } catch (err) {
         console.error('Dashboard load error:', err);

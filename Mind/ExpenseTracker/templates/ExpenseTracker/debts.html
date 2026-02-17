@@ -52,6 +52,33 @@
             <span class="summary-value" id="summaryRemaining">₺0,00</span>
         </div>
     </div>
+    <div class="summary-card">
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.05)); color: #a855f7;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 1l4 4-4 4"></path>
+                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                <path d="M7 23l-4-4 4-4"></path>
+                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Carry Over</span>
+            <span class="summary-value" id="summaryCarryOver" style="color: #a855f7;">₺0,00</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05)); color: #f97316;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">New Spending</span>
+            <span class="summary-value" id="summaryNewSpending" style="color: #f97316;">₺0,00</span>
+        </div>
+    </div>
 </div>
 
 <!-- Filters -->
@@ -75,6 +102,8 @@
                     <th>Status</th>
                     <th>Bank</th>
                     <th>Total Debt</th>
+                    <th>Carry Over</th>
+                    <th>New Spending</th>
                     <th>Min Payment</th>
                     <th>Amount Paid</th>
                     <th>Cutoff Date</th>
@@ -83,7 +112,7 @@
             </thead>
             <tbody>
                 <tr class="empty-row">
-                    <td colspan="7">
+                    <td colspan="9">
                         <div class="empty-state">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
                                 <path d="M12 2v20"></path>
@@ -207,13 +236,19 @@ document.addEventListener('DOMContentLoaded', function() {
     let editingId = null;
     let allDebts = [];
 
+    // Default to current month
+    const now = new Date();
+    const yy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    filterMonth.value = `${yy}-${mm}`;
+
     function formatCurrency(value) {
         return `₺${parseFloat(value || 0).toFixed(2).replace('.', ',')}`;
     }
 
     const emptyRowHTML = `
         <tr class="empty-row">
-            <td colspan="7">
+            <td colspan="9">
                 <div class="empty-state">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
                         <path d="M12 2v20"></path>
@@ -281,13 +316,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateSummary(debts) {
         let totalDebt = 0;
         let totalPaid = 0;
+        let totalCarryOver = 0;
+        let totalNewSpending = 0;
         debts.forEach(d => {
             totalDebt += parseFloat(d.total_debt || 0);
             totalPaid += parseFloat(d.amount_paid || 0);
+            totalCarryOver += parseFloat(d.carry_over || 0);
+            totalNewSpending += parseFloat(d.new_spending || 0);
         });
         document.getElementById('summaryTotalDebt').textContent = formatCurrency(totalDebt);
         document.getElementById('summaryTotalPaid').textContent = formatCurrency(totalPaid);
         document.getElementById('summaryRemaining').textContent = formatCurrency(totalDebt - totalPaid);
+        document.getElementById('summaryCarryOver').textContent = formatCurrency(totalCarryOver);
+        document.getElementById('summaryNewSpending').textContent = formatCurrency(totalNewSpending);
     }
 
     function renderDebts(debts) {
@@ -304,11 +345,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? '<span class="status-badge status-closed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>Closed</span>'
                 : '<span class="status-badge status-open"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle></svg>Open</span>';
 
+            const carryOver = parseFloat(debt.carry_over || 0);
+            const newSpending = parseFloat(debt.new_spending || 0);
+
             return `
             <tr data-id="${debt.id}" class="${rowClass}">
                 <td>${statusBadge}</td>
                 <td>${debt.bank_name || '-'}</td>
                 <td>${formatCurrency(debt.total_debt)}</td>
+                <td style="color: #a855f7; font-weight: 600;">${carryOver > 0 ? formatCurrency(carryOver) : '-'}</td>
+                <td style="color: #f97316; font-weight: 600;">${formatCurrency(newSpending)}</td>
                 <td>${formatCurrency(minPayment)}</td>
                 <td>${formatCurrency(debt.amount_paid)}</td>
                 <td>${debt.cutoff_date || '-'}</td>

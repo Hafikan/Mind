@@ -61,15 +61,31 @@ class Debts(models.Model):
 
 class Credits(models.Model):
     user = models.ForeignKey(AppUser, related_name="credits", on_delete=models.CASCADE)
-    bank = models.OneToOneField(Banks, related_name="bank_debts", on_delete=models.RESTRICT)
+    bank = models.ForeignKey(Banks, related_name="bank_debts", on_delete=models.RESTRICT)
     total_debt = models.DecimalField(max_digits=10, decimal_places=2)
     monthly_fixed_purchase = models.DecimalField(max_digits=10, decimal_places=2)
     total_purchase = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     remaning_purchase = models.DecimalField(max_digits=3,decimal_places=0, blank=True, null=True)
     cutoff_date = models.DateField(blank=True, null=True)
+    start_date = models.DateField(blank=True, null=True)
 
     class Meta:
-        unique_together = ("user","bank","total_debt")
+        unique_together = ("user", "bank", "cutoff_date")
+
+
+class CreditInstallment(models.Model):
+    credit = models.ForeignKey(Credits, related_name="installments", on_delete=models.CASCADE)
+    installment_number = models.PositiveIntegerField()
+    due_date = models.DateField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    is_paid = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("credit", "installment_number")
+        ordering = ["due_date"]
+
+    def __str__(self):
+        return f"{self.credit.bank.name} - Taksit {self.installment_number}"
 
 
 class Income(models.Model):

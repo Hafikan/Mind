@@ -2,6 +2,59 @@
 
 {% block title %}Credits - Mind{% endblock %}
 
+{% block extra_css %}
+<style>
+    .installment-row {
+        background: var(--bg-primary) !important;
+    }
+    .installment-row td {
+        padding: 8px 16px !important;
+        font-size: 13px;
+    }
+    .installment-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .installment-check input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #22c55e;
+    }
+    .installment-paid {
+        color: #22c55e;
+    }
+    .installment-unpaid {
+        color: var(--text-muted);
+    }
+    .expand-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted);
+        padding: 4px;
+        transition: transform 0.2s;
+    }
+    .expand-btn.expanded {
+        transform: rotate(90deg);
+    }
+    .installment-row.hidden {
+        display: none;
+    }
+    .installment-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">Credits</h1>
@@ -25,7 +78,7 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Total Credit Debt</span>
-            <span class="summary-value text-danger" id="summaryTotalDebt">₺0,00</span>
+            <span class="summary-value text-danger" id="summaryTotalDebt">&#8378;0,00</span>
         </div>
     </div>
     <div class="summary-card">
@@ -39,7 +92,7 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Monthly Fixed</span>
-            <span class="summary-value" id="summaryMonthly">₺0,00</span>
+            <span class="summary-value" id="summaryMonthly">&#8378;0,00</span>
         </div>
     </div>
     <div class="summary-card">
@@ -75,12 +128,12 @@
         <table class="data-table">
             <thead>
                 <tr>
+                    <th style="width: 40px;"></th>
                     <th>Bank</th>
                     <th>Total Debt</th>
                     <th>Monthly Fixed</th>
-                    <th>Total Purchase</th>
-                    <th>Remaining</th>
-                    <th>Cutoff Date</th>
+                    <th>Installments</th>
+                    <th>Start Date</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -128,23 +181,19 @@
                         <input type="number" step="0.01" name="total_debt" class="input-neon" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Monthly Fixed Purchase</label>
+                        <label class="form-label">Monthly Installment Amount</label>
                         <input type="number" step="0.01" name="monthly_fixed_purchase" class="input-neon" placeholder="0.00" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Total Purchase</label>
-                        <input type="number" step="0.01" name="total_purchase" class="input-neon" placeholder="0.00">
+                        <label class="form-label">Number of Installments</label>
+                        <input type="number" name="remaning_purchase" class="input-neon" placeholder="12" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Remaining Purchases</label>
-                        <input type="number" name="remaning_purchase" class="input-neon" placeholder="0">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="input-neon" required>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Cutoff Date</label>
-                    <input type="date" name="cutoff_date" class="input-neon">
                 </div>
             </form>
         </div>
@@ -173,6 +222,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let editingId = null;
     let allCredits = [];
+    let expandedCredits = new Set();
+
+    // Default to current month
+    const now = new Date();
+    const yy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    filterMonth.value = `${yy}-${mm}`;
 
     const emptyRowHTML = `
         <tr class="empty-row">
@@ -205,7 +261,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function formatCurrency(value) {
-        return `₺${parseFloat(value || 0).toFixed(2).replace('.', ',')}`;
+        return `\u20BA${parseFloat(value || 0).toFixed(2).replace('.', ',')}`;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('tr-TR', { year: 'numeric', month: 'short' });
     }
 
     function buildQueryParams() {
@@ -221,8 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadCredits() {
         try {
-            const query = buildQueryParams();
-            const url = '/tracker/api/creadits/' + (query ? '?' + query : '');
+            const url = '/tracker/api/creadits/';
             const response = await fetch(url);
             if (response.ok) {
                 allCredits = await response.json();
@@ -252,7 +313,9 @@ document.addEventListener('DOMContentLoaded', function() {
         credits.forEach(c => {
             totalDebt += parseFloat(c.total_debt || 0);
             totalMonthly += parseFloat(c.monthly_fixed_purchase || 0);
-            totalRemaining += parseFloat(c.remaning_purchase || 0);
+            // Count unpaid installments
+            const unpaid = (c.installments || []).filter(i => !i.is_paid).length;
+            totalRemaining += unpaid;
         });
         document.getElementById('summaryTotalDebt').textContent = formatCurrency(totalDebt);
         document.getElementById('summaryMonthly').textContent = formatCurrency(totalMonthly);
@@ -265,14 +328,32 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        tableBody.innerHTML = credits.map(credit => `
+        let html = '';
+        credits.forEach(credit => {
+            const installments = credit.installments || [];
+            const paidCount = installments.filter(i => i.is_paid).length;
+            const totalCount = installments.length;
+            const isExpanded = expandedCredits.has(credit.id);
+
+            html += `
             <tr data-id="${credit.id}">
+                <td>
+                    ${totalCount > 0 ? `
+                    <button class="expand-btn ${isExpanded ? 'expanded' : ''}" data-credit-id="${credit.id}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>` : ''}
+                </td>
                 <td>${credit.bank_name || '-'}</td>
                 <td>${formatCurrency(credit.total_debt)}</td>
                 <td>${formatCurrency(credit.monthly_fixed_purchase)}</td>
-                <td>${formatCurrency(credit.total_purchase)}</td>
-                <td>${credit.remaning_purchase || 0}</td>
-                <td>${credit.cutoff_date || '-'}</td>
+                <td>
+                    ${totalCount > 0 ? `
+                    <span class="installment-badge">${paidCount}/${totalCount}</span>
+                    ` : '-'}
+                </td>
+                <td>${credit.start_date || '-'}</td>
                 <td>
                     <div class="action-btns">
                         <button class="action-btn edit-btn" title="Edit">
@@ -289,8 +370,35 @@ document.addEventListener('DOMContentLoaded', function() {
                         </button>
                     </div>
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+
+            // Installment rows
+            installments.forEach(inst => {
+                html += `
+                <tr class="installment-row ${isExpanded ? '' : 'hidden'}" data-credit-id="${credit.id}">
+                    <td></td>
+                    <td colspan="2">
+                        <div class="installment-check">
+                            <input type="checkbox" ${inst.is_paid ? 'checked' : ''}
+                                data-credit-id="${credit.id}"
+                                data-installment-id="${inst.id}">
+                            <span class="${inst.is_paid ? 'installment-paid' : 'installment-unpaid'}">
+                                Installment ${inst.installment_number}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="${inst.is_paid ? 'installment-paid' : ''}">${formatCurrency(inst.amount)}</td>
+                    <td class="${inst.is_paid ? 'installment-paid' : ''}">${formatDate(inst.due_date)}</td>
+                    <td colspan="2">
+                        <span class="${inst.is_paid ? 'installment-paid' : 'installment-unpaid'}">
+                            ${inst.is_paid ? 'Paid' : 'Pending'}
+                        </span>
+                    </td>
+                </tr>`;
+            });
+        });
+
+        tableBody.innerHTML = html;
     }
 
     async function loadBanks() {
@@ -320,9 +428,8 @@ document.addEventListener('DOMContentLoaded', function() {
             creditForm.querySelector('[name="bank"]').value = credit.bank;
             creditForm.querySelector('[name="total_debt"]').value = credit.total_debt;
             creditForm.querySelector('[name="monthly_fixed_purchase"]').value = credit.monthly_fixed_purchase;
-            creditForm.querySelector('[name="total_purchase"]').value = credit.total_purchase || '';
             creditForm.querySelector('[name="remaning_purchase"]').value = credit.remaning_purchase || '';
-            creditForm.querySelector('[name="cutoff_date"]').value = credit.cutoff_date || '';
+            creditForm.querySelector('[name="start_date"]').value = credit.start_date || '';
         } else {
             creditForm.reset();
         }
@@ -385,6 +492,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    async function toggleInstallment(creditId, installmentId) {
+        try {
+            const response = await fetch(`/tracker/api/creadits/${creditId}/toggle-installment/${installmentId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            if (response.ok) {
+                loadCredits();
+            } else {
+                alert('Failed to toggle installment');
+            }
+        } catch (error) {
+            console.error('Failed to toggle installment:', error);
+        }
+    }
+
     creditForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const formData = new FormData(creditForm);
@@ -392,9 +518,8 @@ document.addEventListener('DOMContentLoaded', function() {
             bank: formData.get('bank'),
             total_debt: formData.get('total_debt'),
             monthly_fixed_purchase: formData.get('monthly_fixed_purchase'),
-            total_purchase: formData.get('total_purchase') || null,
             remaning_purchase: formData.get('remaning_purchase') || null,
-            cutoff_date: formData.get('cutoff_date') || null
+            start_date: formData.get('start_date') || null
         };
         saveCredit(data);
     });
@@ -407,7 +532,30 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     tableBody.addEventListener('click', async function(e) {
-        const row = e.target.closest('tr');
+        // Handle expand/collapse
+        const expandBtn = e.target.closest('.expand-btn');
+        if (expandBtn) {
+            const creditId = parseInt(expandBtn.dataset.creditId);
+            if (expandedCredits.has(creditId)) {
+                expandedCredits.delete(creditId);
+            } else {
+                expandedCredits.add(creditId);
+            }
+            applySearch();
+            return;
+        }
+
+        // Handle checkbox toggle
+        const checkbox = e.target.closest('input[type="checkbox"]');
+        if (checkbox) {
+            e.preventDefault();
+            const creditId = checkbox.dataset.creditId;
+            const installmentId = checkbox.dataset.installmentId;
+            toggleInstallment(creditId, installmentId);
+            return;
+        }
+
+        const row = e.target.closest('tr[data-id]');
         if (!row) return;
         const id = row.dataset.id;
 
