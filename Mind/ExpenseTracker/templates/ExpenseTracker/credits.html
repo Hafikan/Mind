@@ -25,7 +25,7 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Total Credit Debt</span>
-            <span class="summary-value text-danger">$0.00</span>
+            <span class="summary-value text-danger" id="summaryTotalDebt">₺0,00</span>
         </div>
     </div>
     <div class="summary-card">
@@ -39,7 +39,7 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Monthly Fixed</span>
-            <span class="summary-value">$0.00</span>
+            <span class="summary-value" id="summaryMonthly">₺0,00</span>
         </div>
     </div>
     <div class="summary-card">
@@ -52,9 +52,21 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Remaining Purchases</span>
-            <span class="summary-value">0</span>
+            <span class="summary-value" id="summaryRemaining">0</span>
         </div>
     </div>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar">
+    <div class="search-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" class="input-neon" placeholder="Search credits...">
+    </div>
+    <input type="month" id="filterMonth" class="input-neon">
 </div>
 
 <!-- Credits Table -->
@@ -90,7 +102,7 @@
     </div>
 </div>
 
-<!-- Add Credit Modal -->
+<!-- Add/Edit Credit Modal -->
 <div class="modal-overlay" id="creditModalOverlay">
     <div class="modal" id="creditModal">
         <div class="modal-header">
@@ -106,33 +118,33 @@
             <form id="creditForm">
                 <div class="form-group">
                     <label class="form-label">Bank</label>
-                    <select class="input-neon select-neon" required>
+                    <select name="bank" class="input-neon select-neon" required>
                         <option value="">Select bank</option>
                     </select>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Total Debt</label>
-                        <input type="number" step="0.01" class="input-neon" placeholder="0.00" required>
+                        <input type="number" step="0.01" name="total_debt" class="input-neon" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Monthly Fixed Purchase</label>
-                        <input type="number" step="0.01" class="input-neon" placeholder="0.00" required>
+                        <input type="number" step="0.01" name="monthly_fixed_purchase" class="input-neon" placeholder="0.00" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Total Purchase</label>
-                        <input type="number" step="0.01" class="input-neon" placeholder="0.00">
+                        <input type="number" step="0.01" name="total_purchase" class="input-neon" placeholder="0.00">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Remaining Purchases</label>
-                        <input type="number" class="input-neon" placeholder="0">
+                        <input type="number" name="remaning_purchase" class="input-neon" placeholder="0">
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cutoff Date</label>
-                    <input type="date" class="input-neon">
+                    <input type="date" name="cutoff_date" class="input-neon">
                 </div>
             </form>
         </div>
@@ -152,8 +164,169 @@ document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.getElementById('creditModalOverlay');
     const closeBtn = document.getElementById('closeCreditModal');
     const cancelBtn = document.getElementById('cancelCreditBtn');
+    const bankSelect = modal.querySelector('select[name="bank"]');
+    const tableBody = document.querySelector('.data-table tbody');
+    const modalTitle = modal.querySelector('.modal-title');
+    const creditForm = document.getElementById('creditForm');
+    const searchInput = document.getElementById('searchInput');
+    const filterMonth = document.getElementById('filterMonth');
 
-    function openModal() {
+    let editingId = null;
+    let allCredits = [];
+
+    const emptyRowHTML = `
+        <tr class="empty-row">
+            <td colspan="7">
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                        <line x1="1" y1="10" x2="23" y2="10"></line>
+                    </svg>
+                    <p>No credits recorded</p>
+                    <span class="text-muted">Add a credit to track your installments</span>
+                </div>
+            </td>
+        </tr>
+    `;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function formatCurrency(value) {
+        return `₺${parseFloat(value || 0).toFixed(2).replace('.', ',')}`;
+    }
+
+    function buildQueryParams() {
+        const params = new URLSearchParams();
+        const monthValue = filterMonth.value;
+        if (monthValue) {
+            const [year, month] = monthValue.split('-');
+            params.append('year', year);
+            params.append('month', month);
+        }
+        return params.toString();
+    }
+
+    async function loadCredits() {
+        try {
+            const query = buildQueryParams();
+            const url = '/tracker/api/creadits/' + (query ? '?' + query : '');
+            const response = await fetch(url);
+            if (response.ok) {
+                allCredits = await response.json();
+                applySearch();
+            }
+        } catch (error) {
+            console.error('Failed to load credits:', error);
+        }
+    }
+
+    function applySearch() {
+        const searchTerm = searchInput.value.toLowerCase();
+        let filtered = allCredits;
+        if (searchTerm) {
+            filtered = filtered.filter(c =>
+                (c.bank_name && c.bank_name.toLowerCase().includes(searchTerm))
+            );
+        }
+        renderCredits(filtered);
+        updateSummary(filtered);
+    }
+
+    function updateSummary(credits) {
+        let totalDebt = 0;
+        let totalMonthly = 0;
+        let totalRemaining = 0;
+        credits.forEach(c => {
+            totalDebt += parseFloat(c.total_debt || 0);
+            totalMonthly += parseFloat(c.monthly_fixed_purchase || 0);
+            totalRemaining += parseFloat(c.remaning_purchase || 0);
+        });
+        document.getElementById('summaryTotalDebt').textContent = formatCurrency(totalDebt);
+        document.getElementById('summaryMonthly').textContent = formatCurrency(totalMonthly);
+        document.getElementById('summaryRemaining').textContent = totalRemaining;
+    }
+
+    function renderCredits(credits) {
+        if (credits.length === 0) {
+            tableBody.innerHTML = emptyRowHTML;
+            return;
+        }
+
+        tableBody.innerHTML = credits.map(credit => `
+            <tr data-id="${credit.id}">
+                <td>${credit.bank_name || '-'}</td>
+                <td>${formatCurrency(credit.total_debt)}</td>
+                <td>${formatCurrency(credit.monthly_fixed_purchase)}</td>
+                <td>${formatCurrency(credit.total_purchase)}</td>
+                <td>${credit.remaning_purchase || 0}</td>
+                <td>${credit.cutoff_date || '-'}</td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn edit-btn" title="Edit">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete delete-btn" title="Delete">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function loadBanks() {
+        try {
+            const response = await fetch('/tracker/api/banks/');
+            if (response.ok) {
+                const banks = await response.json();
+                bankSelect.innerHTML = '<option value="">Select bank</option>';
+                banks.forEach(bank => {
+                    const option = document.createElement('option');
+                    option.value = bank.id;
+                    option.textContent = bank.name;
+                    bankSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load banks:', error);
+        }
+    }
+
+    async function openModal(credit = null) {
+        await loadBanks();
+        editingId = credit ? credit.id : null;
+        modalTitle.textContent = credit ? 'Edit Credit' : 'Add Credit';
+
+        if (credit) {
+            creditForm.querySelector('[name="bank"]').value = credit.bank;
+            creditForm.querySelector('[name="total_debt"]').value = credit.total_debt;
+            creditForm.querySelector('[name="monthly_fixed_purchase"]').value = credit.monthly_fixed_purchase;
+            creditForm.querySelector('[name="total_purchase"]').value = credit.total_purchase || '';
+            creditForm.querySelector('[name="remaning_purchase"]').value = credit.remaning_purchase || '';
+            creditForm.querySelector('[name="cutoff_date"]').value = credit.cutoff_date || '';
+        } else {
+            creditForm.reset();
+        }
+
         overlay.classList.add('active');
         modal.classList.add('active');
     }
@@ -161,14 +334,102 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeModal() {
         overlay.classList.remove('active');
         modal.classList.remove('active');
+        editingId = null;
     }
 
-    addBtn.addEventListener('click', openModal);
+    async function saveCredit(data) {
+        try {
+            const url = editingId
+                ? `/tracker/api/creadits/${editingId}/`
+                : '/tracker/api/creadits/';
+            const method = editingId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                closeModal();
+                creditForm.reset();
+                loadCredits();
+            } else {
+                const error = await response.json();
+                alert('Failed to save: ' + JSON.stringify(error));
+            }
+        } catch (error) {
+            console.error('Failed to save credit:', error);
+        }
+    }
+
+    async function deleteCredit(id) {
+        if (!confirm('Are you sure you want to delete this credit?')) return;
+
+        try {
+            const response = await fetch(`/tracker/api/creadits/${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            if (response.ok) {
+                loadCredits();
+            } else {
+                alert('Failed to delete credit');
+            }
+        } catch (error) {
+            console.error('Failed to delete credit:', error);
+        }
+    }
+
+    creditForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(creditForm);
+        const data = {
+            bank: formData.get('bank'),
+            total_debt: formData.get('total_debt'),
+            monthly_fixed_purchase: formData.get('monthly_fixed_purchase'),
+            total_purchase: formData.get('total_purchase') || null,
+            remaning_purchase: formData.get('remaning_purchase') || null,
+            cutoff_date: formData.get('cutoff_date') || null
+        };
+        saveCredit(data);
+    });
+
+    addBtn.addEventListener('click', () => openModal());
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     overlay.addEventListener('click', function(e) {
         if (e.target === overlay) closeModal();
     });
+
+    tableBody.addEventListener('click', async function(e) {
+        const row = e.target.closest('tr');
+        if (!row) return;
+        const id = row.dataset.id;
+
+        const editBtn = e.target.closest('.edit-btn');
+        if (editBtn) {
+            const response = await fetch(`/tracker/api/creadits/${id}/`);
+            if (response.ok) {
+                const credit = await response.json();
+                openModal(credit);
+            }
+        }
+
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) {
+            deleteCredit(id);
+        }
+    });
+
+    searchInput.addEventListener('input', applySearch);
+    filterMonth.addEventListener('change', function() { loadCredits(); });
+
+    loadCredits();
 });
 </script>
 {% endblock %}

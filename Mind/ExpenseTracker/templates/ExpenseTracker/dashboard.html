@@ -1,0 +1,604 @@
+{% extends 'index.html' %}
+
+{% block title %}Dashboard - Mind{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    .chart-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 24px;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .chart-card:hover {
+        border-color: var(--border-glow);
+        box-shadow: var(--neon-glow);
+    }
+
+    .chart-card-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 16px;
+    }
+
+    .chart-container {
+        position: relative;
+        width: 100%;
+        height: 300px;
+    }
+
+    .chart-card-full {
+        grid-column: 1 / -1;
+    }
+
+    .no-data-message {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 300px;
+        color: var(--text-muted);
+        font-size: 15px;
+    }
+
+    @media (max-width: 900px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <div class="filters-bar" style="margin-bottom: 0;">
+        <input type="month" id="monthFilter" class="input-neon" style="min-width: 180px;">
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05)); color: #22c55e;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Income</span>
+            <span class="summary-value text-success" id="totalIncome">₺0</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Expenses</span>
+            <span class="summary-value" id="totalExpenses">₺0</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(255, 71, 87, 0.2), rgba(255, 71, 87, 0.05)); color: var(--danger);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20"></path>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Debt</span>
+            <span class="summary-value text-danger" id="totalDebt">₺0</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05)); color: #3b82f6;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Credits</span>
+            <span class="summary-value" id="totalCredits" style="color: #3b82f6;">₺0</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05)); color: #f97316;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Shopping</span>
+            <span class="summary-value" id="totalShopping" style="color: #f97316;">₺0</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.05)); color: #a855f7;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 20V10"></path>
+                <path d="M12 20V4"></path>
+                <path d="M6 20v-6"></path>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Net Balance</span>
+            <span class="summary-value" id="netTotal">₺0</span>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="dashboard-grid">
+    <div class="chart-card">
+        <div class="chart-card-title">Spending Breakdown</div>
+        <div class="chart-container" id="expensesChartContainer">
+            <canvas id="expensesChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-card-title">Income vs Spending</div>
+        <div class="chart-container" id="overviewChartContainer">
+            <canvas id="overviewChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-card-title">Debts by Bank</div>
+        <div class="chart-container" id="debtsChartContainer">
+            <canvas id="debtsChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card chart-card-full" style="grid-column: 1 / -1;">
+        <div class="chart-card-title">Monthly Trend (Last 6 Months)</div>
+        <div class="chart-container" id="trendChartContainer">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+const API_URL = '/tracker/api/dashboard/';
+const monthFilter = document.getElementById('monthFilter');
+
+// Set default to current month
+const now = new Date();
+monthFilter.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+const fmt = (v) => `₺${Number(v || 0).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+// Chart defaults
+Chart.defaults.color = '#a0a0a0';
+Chart.defaults.borderColor = '#2a2a2a';
+Chart.defaults.font.family = "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+
+const COLORS = ['#FFC107', '#3b82f6', '#22c55e', '#ff4757', '#a78bfa', '#f97316', '#06b6d4', '#ec4899', '#84cc16', '#f59e0b'];
+
+let expensesChart = null;
+let overviewChart = null;
+let debtsChart = null;
+let trendChart = null;
+
+function showNoData(containerId, canvas) {
+    canvas.style.display = 'none';
+    const container = document.getElementById(containerId);
+    let msg = container.querySelector('.no-data-message');
+    if (!msg) {
+        msg = document.createElement('div');
+        msg.className = 'no-data-message';
+        msg.textContent = 'No data available';
+        container.appendChild(msg);
+    }
+    msg.style.display = 'flex';
+}
+
+function showCanvas(containerId, canvas) {
+    canvas.style.display = 'block';
+    const container = document.getElementById(containerId);
+    const msg = container.querySelector('.no-data-message');
+    if (msg) msg.style.display = 'none';
+}
+
+function renderExpensesChart(data, totalIncome, creditsTotal, shoppingTotal, debtsPaid) {
+    const canvas = document.getElementById('expensesChart');
+    const labels = Object.keys(data);
+    const values = labels.map(k => data[k].actual || data[k].expected || 0);
+    const expensesOnly = values.reduce((s, v) => s + v, 0);
+
+    if (expensesChart) expensesChart.destroy();
+
+    const totalSpending = expensesOnly + creditsTotal + shoppingTotal + debtsPaid;
+    if (totalSpending <= 0 && totalIncome <= 0) {
+        showNoData('expensesChartContainer', canvas);
+        return;
+    }
+    showCanvas('expensesChartContainer', canvas);
+
+    const chartLabels = [...labels];
+    const chartValues = [...values];
+    const chartColors = [...COLORS.slice(0, labels.length)];
+
+    // Debts Paid dilimi
+    if (debtsPaid > 0) {
+        chartLabels.push('Debts Paid');
+        chartValues.push(debtsPaid);
+        chartColors.push('rgba(255, 71, 87, 0.7)');
+    }
+
+    // Credits dilimi
+    if (creditsTotal > 0) {
+        chartLabels.push('Credits');
+        chartValues.push(creditsTotal);
+        chartColors.push('rgba(59, 130, 246, 0.7)');
+    }
+
+    // Shopping dilimi
+    if (shoppingTotal > 0) {
+        chartLabels.push('Shopping');
+        chartValues.push(shoppingTotal);
+        chartColors.push('rgba(249, 115, 22, 0.7)');
+    }
+
+    const pct = totalIncome > 0 ? ((totalSpending / totalIncome) * 100).toFixed(1) : 0;
+
+    expensesChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                data: chartValues,
+                backgroundColor: chartColors,
+                borderColor: '#1a1a1a',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const val = ctx.parsed;
+                            const ratio = totalIncome > 0 ? ((val / totalIncome) * 100).toFixed(1) : 0;
+                            return ` ${ctx.label}: ${fmt(val)} (${ratio}%)`;
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            id: 'centerText',
+            afterDraw(chart) {
+                if (totalIncome <= 0) return;
+                const { ctx, chartArea } = chart;
+                const centerX = (chartArea.left + chartArea.right) / 2;
+                const centerY = (chartArea.top + chartArea.bottom) / 2;
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = 'bold 22px Segoe UI, sans-serif';
+                ctx.fillStyle = totalSpending > totalIncome ? '#ff4757' : '#22c55e';
+                ctx.fillText(`${pct}%`, centerX, centerY - 8);
+                ctx.font = '12px Segoe UI, sans-serif';
+                ctx.fillStyle = '#a0a0a0';
+                ctx.fillText('of income', centerX, centerY + 14);
+                ctx.restore();
+            }
+        }]
+    });
+}
+
+function renderOverviewChart(totalIncome, totalExpenses, totalDebtRemaining, totalCredits, totalShopping) {
+    const canvas = document.getElementById('overviewChart');
+    if (overviewChart) overviewChart.destroy();
+
+    const totalSpending = totalExpenses + totalDebtRemaining + totalCredits + totalShopping;
+    if (totalIncome <= 0 && totalSpending <= 0) {
+        showNoData('overviewChartContainer', canvas);
+        return;
+    }
+    showCanvas('overviewChartContainer', canvas);
+
+    overviewChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: ['Income', 'Expenses', 'Debts', 'Credits', 'Shopping'],
+            datasets: [{
+                data: [totalIncome, totalExpenses, totalDebtRemaining, totalCredits, totalShopping],
+                backgroundColor: [
+                    'rgba(34, 197, 94, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(255, 71, 87, 0.7)',
+                    'rgba(59, 130, 246, 0.7)',
+                    'rgba(249, 115, 22, 0.7)'
+                ],
+                borderColor: ['#22c55e', '#FFC107', '#ff4757', '#3b82f6', '#f97316'],
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { callback: (v) => fmt(v) }
+                },
+                y: { grid: { display: false } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const val = ctx.parsed.x;
+                            const pct = totalIncome > 0 ? ((val / totalIncome) * 100).toFixed(1) : 0;
+                            return ` ${fmt(val)} (${pct}% of income)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderDebtsChart(data) {
+    const canvas = document.getElementById('debtsChart');
+    const labels = Object.keys(data);
+    const paidValues = labels.map(k => data[k].paid || 0);
+    const remainingValues = labels.map(k => data[k].remaining || 0);
+
+    if (debtsChart) debtsChart.destroy();
+
+    if (labels.length === 0) {
+        showNoData('debtsChartContainer', canvas);
+        return;
+    }
+    showCanvas('debtsChartContainer', canvas);
+
+    debtsChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Paid',
+                    data: paidValues,
+                    backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                    borderColor: '#22c55e',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Remaining',
+                    data: remainingValues,
+                    backgroundColor: 'rgba(255, 71, 87, 0.7)',
+                    borderColor: '#ff4757',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { callback: (v) => fmt(v) }
+                },
+                y: {
+                    stacked: true,
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        afterBody: (items) => {
+                            const idx = items[0].dataIndex;
+                            const bank = labels[idx];
+                            const total = data[bank].total || 0;
+                            const paid = data[bank].paid || 0;
+                            const pct = total > 0 ? ((paid / total) * 100).toFixed(1) : 0;
+                            return `Total: ${fmt(total)} — ${pct}% paid`;
+                        },
+                        label: (ctx) => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.x)}`
+                    }
+                }
+            }
+        },
+        plugins: [{
+            id: 'barLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                chart.data.labels.forEach((label, i) => {
+                    const bank = label;
+                    const total = data[bank].total || 0;
+                    const paid = data[bank].paid || 0;
+                    const remaining = data[bank].remaining || 0;
+
+                    // Get the meta for the last dataset (remaining) to find bar end
+                    const meta = chart.getDatasetMeta(1);
+                    const bar = meta.data[i];
+                    const metaPaid = chart.getDatasetMeta(0);
+                    const barPaid = metaPaid.data[i];
+
+                    if (!bar || !barPaid) return;
+
+                    const pct = total > 0 ? ((paid / total) * 100).toFixed(0) : 0;
+                    const labelText = `${fmt(paid)} / ${fmt(total)}`;
+
+                    ctx.save();
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = '11px Segoe UI, sans-serif';
+                    ctx.fillStyle = '#a0a0a0';
+                    const xPos = bar.x + 8;
+                    const yPos = bar.y;
+                    ctx.fillText(labelText, xPos, yPos);
+                    ctx.restore();
+                });
+            }
+        }]
+    });
+}
+
+function renderTrendChart(data) {
+    const canvas = document.getElementById('trendChart');
+    const labels = data.map(d => d.label);
+    const income = data.map(d => d.income);
+    const expenses = data.map(d => d.expenses);
+    const debts = data.map(d => d.debts);
+    const credits = data.map(d => d.credits);
+    const shopping = data.map(d => d.shopping);
+
+    if (trendChart) trendChart.destroy();
+
+    if (data.length === 0) {
+        showNoData('trendChartContainer', canvas);
+        return;
+    }
+    showCanvas('trendChartContainer', canvas);
+
+    trendChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: income,
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#22c55e'
+                },
+                {
+                    label: 'Expenses',
+                    data: expenses,
+                    borderColor: '#FFC107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#FFC107'
+                },
+                {
+                    label: 'Debts',
+                    data: debts,
+                    borderColor: '#ff4757',
+                    backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#ff4757'
+                },
+                {
+                    label: 'Credits',
+                    data: credits,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#3b82f6'
+                },
+                {
+                    label: 'Shopping',
+                    data: shopping,
+                    borderColor: '#f97316',
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#f97316'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (v) => fmt(v) }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function loadDashboard() {
+    const [year, month] = monthFilter.value.split('-');
+    try {
+        const res = await fetch(`${API_URL}?month=${month}&year=${year}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json();
+
+        // Summary cards
+        const incomeTotal = data.income_summary.total;
+        document.getElementById('totalIncome').textContent = fmt(incomeTotal);
+
+        const totalExp = Object.values(data.expenses_by_category).reduce((s, v) => s + (v.actual || v.expected || 0), 0);
+        document.getElementById('totalExpenses').textContent = fmt(totalExp);
+
+        const ds = data.debts_summary;
+        document.getElementById('totalDebt').textContent = fmt(ds.total_debt);
+
+        const cs = data.credits_summary;
+        document.getElementById('totalCredits').textContent = fmt(cs.total_monthly);
+
+        const shoppingTotal = data.shopping_summary.total;
+        document.getElementById('totalShopping').textContent = fmt(shoppingTotal);
+
+        const net = incomeTotal - totalExp - ds.total_paid - cs.total_monthly - shoppingTotal;
+        const netEl = document.getElementById('netTotal');
+        netEl.className = 'summary-value ' + (net >= 0 ? 'text-success' : 'text-danger');
+        netEl.textContent = (net < 0 ? '-' : '+') + fmt(Math.abs(net));
+
+        // Charts
+        renderExpensesChart(data.expenses_by_category, incomeTotal, cs.total_monthly, shoppingTotal, ds.total_paid);
+        renderOverviewChart(incomeTotal, totalExp, ds.total_paid, cs.total_monthly, shoppingTotal);
+        renderDebtsChart(data.debts_by_bank);
+        renderTrendChart(data.monthly_trend);
+    } catch (err) {
+        console.error('Dashboard load error:', err);
+    }
+}
+
+monthFilter.addEventListener('change', loadDashboard);
+loadDashboard();
+</script>
+{% endblock %}

@@ -25,7 +25,7 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Total Expected</span>
-            <span class="summary-value">$0.00</span>
+            <span class="summary-value">₺0,00</span>
         </div>
     </div>
     <div class="summary-card">
@@ -37,7 +37,7 @@
         </div>
         <div class="summary-content">
             <span class="summary-label">Total Actual</span>
-            <span class="summary-value">$0.00</span>
+            <span class="summary-value">₺0,00</span>
         </div>
     </div>
     <div class="summary-card">
@@ -71,37 +71,8 @@
     <input type="month" id="filterMonth" class="input-neon">
 </div>
 
-<!-- Expenses Table -->
-<div class="card">
-    <div class="table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Description</th>
-                    <th>Category</th>
-                    <th>Expected</th>
-                    <th>Actual</th>
-                    <th>Pay Day</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="empty-row">
-                    <td colspan="6">
-                        <div class="empty-state">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                                <line x1="1" y1="10" x2="23" y2="10"></line>
-                            </svg>
-                            <p>No expenses found</p>
-                            <span class="text-muted">Add your first expense to get started</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+<!-- Category-Grouped Expenses -->
+<div id="expensesContainer"></div>
 
 <!-- Add Expense Modal -->
 <div class="modal-overlay" id="expenseModalOverlay">
@@ -155,6 +126,150 @@
         </div>
     </div>
 </div>
+
+<style>
+.category-accordion {
+    margin-bottom: 16px;
+}
+
+.category-accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+    user-select: none;
+}
+
+.category-accordion.open .category-accordion-header {
+    border-radius: 8px 8px 0 0;
+    border-bottom-color: transparent;
+    border-color: var(--border-glow);
+    box-shadow: var(--neon-glow);
+}
+
+.category-accordion-header:hover {
+    border-color: var(--border-glow);
+    box-shadow: var(--neon-glow);
+}
+
+.category-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.category-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.category-header-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.category-header-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: 8px;
+}
+
+.category-header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.category-header-total {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.category-chevron {
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+}
+
+.category-accordion.open .category-chevron {
+    transform: rotate(180deg);
+    color: var(--accent-primary);
+}
+
+.category-accordion-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-glow);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.category-accordion.open .category-accordion-body {
+    opacity: 1;
+    visibility: visible;
+    border-color: var(--border-glow);
+    box-shadow: var(--neon-glow);
+}
+
+.category-accordion:not(.open) .category-accordion-body {
+    border-color: transparent;
+}
+
+.category-accordion-body .data-table th:first-child,
+.category-accordion-body .data-table td:first-child {
+    padding-left: 20px;
+}
+
+.category-accordion-body .data-table th:last-child,
+.category-accordion-body .data-table td:last-child {
+    padding-right: 20px;
+}
+
+.total-row td {
+    font-weight: 700 !important;
+    color: var(--accent-primary) !important;
+    border-bottom: none !important;
+    background: var(--bg-elevated);
+}
+
+.empty-expenses-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.empty-expenses-state svg {
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-expenses-state p {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -166,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeBtn = document.getElementById('closeExpenseModal');
     const cancelBtn = document.getElementById('cancelExpenseBtn');
     const categorySelect = modal.querySelector('select[name="category"]');
-    const tableBody = document.querySelector('.data-table tbody');
+    const container = document.getElementById('expensesContainer');
     const summaryValues = document.querySelectorAll('.summary-value');
     const modalTitle = modal.querySelector('.modal-title');
     const searchInput = document.getElementById('searchInput');
@@ -175,20 +290,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let editingId = null;
     let allExpenses = [];
+    let openCategories = new Set();
 
-    const emptyRowHTML = `
-        <tr class="empty-row">
-            <td colspan="6">
-                <div class="empty-state">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                        <line x1="1" y1="10" x2="23" y2="10"></line>
-                    </svg>
-                    <p>No expenses found</p>
-                    <span class="text-muted">Add your first expense to get started</span>
-                </div>
-            </td>
-        </tr>
+    function formatCurrency(value) {
+        return `₺${parseFloat(value || 0).toFixed(2).replace('.', ',')}`;
+    }
+
+    const emptyHTML = `
+        <div class="empty-expenses-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+            </svg>
+            <p>No expenses found</p>
+            <span class="text-muted">Add your first expense to get started</span>
+        </div>
     `;
 
     function buildQueryParams() {
@@ -215,26 +331,23 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 allExpenses = await response.json();
                 applySearch();
+                updateSummaryFromData(allExpenses);
             }
         } catch (error) {
             console.error('Failed to load expenses:', error);
         }
     }
 
-    async function loadSummary() {
-        try {
-            const query = buildQueryParams();
-            const url = '/tracker/api/expenses/summary/' + (query ? '?' + query : '');
-            const response = await fetch(url);
-            if (response.ok) {
-                const data = await response.json();
-                summaryValues[0].textContent = `$${parseFloat(data.total_expected).toFixed(2)}`;
-                summaryValues[1].textContent = `$${parseFloat(data.total_actual).toFixed(2)}`;
-                summaryValues[2].textContent = data.count;
-            }
-        } catch (error) {
-            console.error('Failed to load summary:', error);
-        }
+    function updateSummaryFromData(expenses) {
+        let totalExpected = 0;
+        let totalActual = 0;
+        expenses.forEach(exp => {
+            totalExpected += parseFloat(exp.expected_amount || 0);
+            totalActual += parseFloat(exp.actual_amount || 0);
+        });
+        summaryValues[0].textContent = formatCurrency(totalExpected);
+        summaryValues[1].textContent = formatCurrency(totalActual);
+        summaryValues[2].textContent = expenses.length;
     }
 
     function applySearch() {
@@ -248,46 +361,153 @@ document.addEventListener('DOMContentLoaded', function() {
             );
         }
 
-        renderExpenses(filtered);
+        renderGroupedExpenses(filtered);
     }
 
     function applyFilters() {
         loadExpenses();
-        loadSummary();
     }
 
-    function renderExpenses(expenses) {
+    function groupByCategory(expenses) {
+        const groups = {};
+        expenses.forEach(exp => {
+            const catName = exp.category_name || 'Uncategorized';
+            if (!groups[catName]) {
+                groups[catName] = { expenses: [], color: null };
+            }
+            groups[catName].expenses.push(exp);
+        });
+        return groups;
+    }
+
+    function renderGroupedExpenses(expenses) {
         if (expenses.length === 0) {
-            tableBody.innerHTML = emptyRowHTML;
+            container.innerHTML = emptyHTML;
             return;
         }
 
-        tableBody.innerHTML = expenses.map(exp => `
-            <tr data-id="${exp.id}">
-                <td>${exp.description}</td>
-                <td>${exp.category_name || '-'}</td>
-                <td>$${parseFloat(exp.expected_amount).toFixed(2)}</td>
-                <td>$${parseFloat(exp.actual_amount || 0).toFixed(2)}</td>
-                <td>${exp.pay_day}</td>
-                <td>
-                    <div class="action-btns">
-                        <button class="action-btn edit-btn" title="Edit">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                        </button>
-                        <button class="action-btn delete delete-btn" title="Delete">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                        </button>
+        const groups = groupByCategory(expenses);
+        const categoryNames = Object.keys(groups).sort();
+
+        // If only one category, auto-open it
+        if (categoryNames.length === 1 && openCategories.size === 0) {
+            openCategories.add(categoryNames[0]);
+        }
+
+        container.innerHTML = categoryNames.map(catName => {
+            const group = groups[catName];
+            const exps = group.expenses;
+            const isOpen = openCategories.has(catName);
+            const totalExpected = exps.reduce((sum, e) => sum + parseFloat(e.expected_amount || 0), 0);
+            const totalActual = exps.reduce((sum, e) => sum + parseFloat(e.actual_amount || 0), 0);
+
+            return `
+            <div class="category-accordion ${isOpen ? 'open' : ''}" data-category="${catName}">
+                <div class="category-accordion-header">
+                    <div class="category-header-left">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span class="category-header-title">${catName}</span>
+                        <span class="category-header-count">(${exps.length})</span>
                     </div>
-                </td>
-            </tr>
-        `).join('');
+                    <div class="category-header-right">
+                        <span class="category-header-total">${formatCurrency(totalActual)}</span>
+                        <svg class="category-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="category-accordion-body" style="${isOpen ? 'max-height: 2000px; opacity: 1; visibility: visible;' : ''}">
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Expected</th>
+                                    <th>Actual</th>
+                                    <th>Pay Day</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${exps.map(exp => `
+                                <tr data-id="${exp.id}">
+                                    <td>${exp.description}</td>
+                                    <td>${formatCurrency(exp.expected_amount)}</td>
+                                    <td>${formatCurrency(exp.actual_amount)}</td>
+                                    <td>${exp.pay_day}</td>
+                                    <td>
+                                        <div class="action-btns">
+                                            <button class="action-btn edit-btn" title="Edit">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                </svg>
+                                            </button>
+                                            <button class="action-btn delete delete-btn" title="Delete">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                `).join('')}
+                                <tr class="total-row">
+                                    <td>Total</td>
+                                    <td>${formatCurrency(totalExpected)}</td>
+                                    <td>${formatCurrency(totalActual)}</td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
     }
+
+    // Accordion toggle (event delegation)
+    container.addEventListener('click', function(e) {
+        const header = e.target.closest('.category-accordion-header');
+        if (header) {
+            const accordion = header.closest('.category-accordion');
+            const catName = accordion.dataset.category;
+            const body = accordion.querySelector('.category-accordion-body');
+
+            if (accordion.classList.contains('open')) {
+                accordion.classList.remove('open');
+                body.style.maxHeight = '0';
+                openCategories.delete(catName);
+            } else {
+                accordion.classList.add('open');
+                body.style.maxHeight = body.scrollHeight + 'px';
+                openCategories.add(catName);
+            }
+            return;
+        }
+
+        // Edit / Delete
+        const row = e.target.closest('tr[data-id]');
+        if (!row) return;
+        const id = row.dataset.id;
+
+        const editBtn = e.target.closest('.edit-btn');
+        if (editBtn) {
+            fetch(`/tracker/api/expenses/${id}/`)
+                .then(r => r.ok ? r.json() : null)
+                .then(expense => { if (expense) openModal(expense); });
+        }
+
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) {
+            deleteExpense(id);
+        }
+    });
 
     async function loadCategories() {
         try {
@@ -420,27 +640,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target === overlay) closeModal();
     });
 
-    // Edit and Delete button handlers (event delegation)
-    tableBody.addEventListener('click', async function(e) {
-        const row = e.target.closest('tr');
-        if (!row) return;
-        const id = row.dataset.id;
-
-        const editBtn = e.target.closest('.edit-btn');
-        if (editBtn) {
-            const response = await fetch(`/tracker/api/expenses/${id}/`);
-            if (response.ok) {
-                const expense = await response.json();
-                openModal(expense);
-            }
-        }
-
-        const deleteBtn = e.target.closest('.delete-btn');
-        if (deleteBtn) {
-            deleteExpense(id);
-        }
-    });
-
     // Filter event listeners
     searchInput.addEventListener('input', applySearch);
     filterCategory.addEventListener('change', applyFilters);
@@ -468,7 +667,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load on page load
     loadFilterCategories();
     loadExpenses();
-    loadSummary();
 });
 </script>
 {% endblock %}

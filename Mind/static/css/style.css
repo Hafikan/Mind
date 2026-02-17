@@ -71,9 +71,44 @@ body {
     flex-direction: column;
 }
 
-.sidebar:hover,
 .sidebar.expanded {
     width: var(--sidebar-width-expanded);
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle-section {
+    padding: 12px 14px;
+    display: flex;
+    justify-content: center;
+}
+
+.sidebar.expanded .sidebar-toggle-section {
+    justify-content: flex-end;
+}
+
+.sidebar-toggle-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.sidebar-toggle-btn:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-color);
+    color: var(--accent-primary);
+}
+
+.sidebar.expanded .sidebar-toggle-btn {
+    color: var(--accent-primary);
 }
 
 /* Profile Section (Top of Sidebar) */
@@ -150,8 +185,6 @@ body {
     transition: all var(--transition-speed) ease;
 }
 
-.sidebar:hover .profile-name,
-.sidebar:hover .profile-chevron,
 .sidebar.expanded .profile-name,
 .sidebar.expanded .profile-chevron {
     opacity: 1;
@@ -227,7 +260,6 @@ body {
     transition: opacity var(--transition-speed) ease;
 }
 
-.sidebar:hover .item-text,
 .sidebar.expanded .item-text {
     opacity: 1;
 }
@@ -256,7 +288,6 @@ body {
     transform: rotate(0deg);
 }
 
-.sidebar:hover .menu-chevron,
 .sidebar.expanded .menu-chevron {
     opacity: 1;
 }
@@ -278,7 +309,7 @@ body {
     max-height: 300px;
 }
 
-.sidebar:not(:hover):not(.expanded) .sidebar-submenu {
+.sidebar:not(.expanded) .sidebar-submenu {
     max-height: 0;
 }
 
@@ -294,7 +325,6 @@ body {
     font-size: 13px;
 }
 
-.sidebar:not(:hover) .sidebar-subitem,
 .sidebar:not(.expanded) .sidebar-subitem {
     padding-left: 14px;
 }
@@ -338,7 +368,6 @@ body {
     transition: opacity var(--transition-speed) ease;
 }
 
-.sidebar:hover .subitem-text,
 .sidebar.expanded .subitem-text {
     opacity: 1;
 }
@@ -642,7 +671,6 @@ button.popup-nav-item {
     transition: margin-left var(--transition-speed) ease;
 }
 
-.sidebar:hover ~ .main-content,
 .sidebar.expanded ~ .main-content {
     margin-left: var(--sidebar-width-expanded);
 }

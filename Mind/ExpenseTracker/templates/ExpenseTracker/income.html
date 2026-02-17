@@ -1,0 +1,424 @@
+{% extends 'index.html' %}
+
+{% block title %}Income - Mind{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Income</h1>
+    <button class="btn btn-primary" id="addIncomeBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Add Income</span>
+    </button>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05)); color: #22c55e;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Income</span>
+            <span class="summary-value text-success" id="totalIncome">₺0,00</span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Total Entries</span>
+            <span class="summary-value" id="totalEntries">0</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar">
+    <div class="search-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" class="input-neon" placeholder="Search income...">
+    </div>
+    <select id="filterType" class="input-neon select-neon">
+        <option value="">All Types</option>
+    </select>
+    <input type="month" id="filterMonth" class="input-neon">
+</div>
+
+<!-- Income Table -->
+<div class="card">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="incomeTableBody">
+                <tr class="empty-row">
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            <p>No income found</p>
+                            <span class="text-muted">Add your first income to get started</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Income Modal -->
+<div class="modal-overlay" id="incomeModalOverlay">
+    <div class="modal" id="incomeModal">
+        <div class="modal-header">
+            <h2 class="modal-title">Add Income</h2>
+            <button class="modal-close" id="closeIncomeModal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="incomeForm">
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" name="description" class="input-neon" placeholder="Enter description" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Amount</label>
+                        <input type="number" step="0.01" name="amount" class="input-neon" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select name="income_type" class="input-neon select-neon" required>
+                            <option value="">Select type</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="date" class="input-neon" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="input-neon textarea-neon" rows="3" placeholder="Optional notes..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" id="cancelIncomeBtn">Cancel</button>
+            <button class="btn btn-primary" type="submit" form="incomeForm">Save Income</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 193, 7, 0.05));
+    color: var(--accent-primary);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.type-badge.salary { background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05)); color: #22c55e; border-color: rgba(34, 197, 94, 0.3); }
+.type-badge.side_job { background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05)); color: #3b82f6; border-color: rgba(59, 130, 246, 0.3); }
+.type-badge.assets { background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.05)); color: #a855f7; border-color: rgba(168, 85, 247, 0.3); }
+.type-badge.freelance { background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); color: #f97316; border-color: rgba(249, 115, 22, 0.3); }
+.type-badge.investment { background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(6, 182, 212, 0.05)); color: #06b6d4; border-color: rgba(6, 182, 212, 0.3); }
+.type-badge.other { background: linear-gradient(135deg, rgba(160, 160, 160, 0.15), rgba(160, 160, 160, 0.05)); color: #a0a0a0; border-color: rgba(160, 160, 160, 0.3); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addBtn = document.getElementById('addIncomeBtn');
+    const modal = document.getElementById('incomeModal');
+    const overlay = document.getElementById('incomeModalOverlay');
+    const closeBtn = document.getElementById('closeIncomeModal');
+    const cancelBtn = document.getElementById('cancelIncomeBtn');
+    const modalTitle = modal.querySelector('.modal-title');
+    const form = document.getElementById('incomeForm');
+    const tableBody = document.getElementById('incomeTableBody');
+    const searchInput = document.getElementById('searchInput');
+    const filterType = document.getElementById('filterType');
+    const filterMonth = document.getElementById('filterMonth');
+    const typeSelect = form.querySelector('select[name="income_type"]');
+
+    let editingId = null;
+    let allIncomes = [];
+    let incomeTypes = [];
+
+    function formatCurrency(value) {
+        return `₺${parseFloat(value || 0).toFixed(2).replace('.', ',')}`;
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function buildQueryParams() {
+        const params = new URLSearchParams();
+        const type = filterType.value;
+        const monthValue = filterMonth.value;
+
+        if (type) params.append('income_type', type);
+        if (monthValue) {
+            const [year, month] = monthValue.split('-');
+            params.append('year', year);
+            params.append('month', month);
+        }
+        return params.toString();
+    }
+
+    async function loadTypes() {
+        try {
+            const res = await fetch('/tracker/api/incomes/types/');
+            if (res.ok) {
+                incomeTypes = await res.json();
+                // Populate filter
+                filterType.innerHTML = '<option value="">All Types</option>';
+                incomeTypes.forEach(t => {
+                    filterType.innerHTML += `<option value="${t.value}">${t.label}</option>`;
+                });
+                // Populate modal select
+                typeSelect.innerHTML = '<option value="">Select type</option>';
+                incomeTypes.forEach(t => {
+                    typeSelect.innerHTML += `<option value="${t.value}">${t.label}</option>`;
+                });
+            }
+        } catch (err) {
+            console.error('Failed to load types:', err);
+        }
+    }
+
+    async function loadIncomes() {
+        try {
+            const query = buildQueryParams();
+            const url = '/tracker/api/incomes/' + (query ? '?' + query : '');
+            const res = await fetch(url);
+            if (res.ok) {
+                allIncomes = await res.json();
+                applySearch();
+                updateSummary(allIncomes);
+            }
+        } catch (err) {
+            console.error('Failed to load incomes:', err);
+        }
+    }
+
+    function updateSummary(incomes) {
+        let total = 0;
+        incomes.forEach(i => { total += parseFloat(i.amount || 0); });
+        document.getElementById('totalIncome').textContent = formatCurrency(total);
+        document.getElementById('totalEntries').textContent = incomes.length;
+    }
+
+    function applySearch() {
+        const term = searchInput.value.toLowerCase();
+        let filtered = allIncomes;
+        if (term) {
+            filtered = filtered.filter(i =>
+                i.description.toLowerCase().includes(term) ||
+                (i.notes && i.notes.toLowerCase().includes(term)) ||
+                i.income_type_display.toLowerCase().includes(term)
+            );
+        }
+        renderTable(filtered);
+    }
+
+    function renderTable(incomes) {
+        if (incomes.length === 0) {
+            tableBody.innerHTML = `
+                <tr class="empty-row">
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            <p>No income found</p>
+                            <span class="text-muted">Add your first income to get started</span>
+                        </div>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = incomes.map(i => `
+            <tr data-id="${i.id}">
+                <td>${i.description}</td>
+                <td class="text-success" style="font-weight: 600;">${formatCurrency(i.amount)}</td>
+                <td><span class="type-badge ${i.income_type}">${i.income_type_display}</span></td>
+                <td>${i.date}</td>
+                <td class="text-muted">${i.notes || '-'}</td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn edit-btn" title="Edit">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete delete-btn" title="Delete">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Table click delegation
+    tableBody.addEventListener('click', function(e) {
+        const row = e.target.closest('tr[data-id]');
+        if (!row) return;
+        const id = row.dataset.id;
+
+        if (e.target.closest('.edit-btn')) {
+            fetch(`/tracker/api/incomes/${id}/`)
+                .then(r => r.ok ? r.json() : null)
+                .then(income => { if (income) openModal(income); });
+        }
+
+        if (e.target.closest('.delete-btn')) {
+            deleteIncome(id);
+        }
+    });
+
+    function openModal(income = null) {
+        editingId = income ? income.id : null;
+        modalTitle.textContent = income ? 'Edit Income' : 'Add Income';
+
+        if (income) {
+            form.querySelector('[name="description"]').value = income.description;
+            form.querySelector('[name="amount"]').value = income.amount;
+            form.querySelector('[name="income_type"]').value = income.income_type;
+            form.querySelector('[name="date"]').value = income.date;
+            form.querySelector('[name="notes"]').value = income.notes || '';
+        } else {
+            form.reset();
+        }
+
+        overlay.classList.add('active');
+        modal.classList.add('active');
+    }
+
+    function closeModal() {
+        overlay.classList.remove('active');
+        modal.classList.remove('active');
+        editingId = null;
+    }
+
+    async function deleteIncome(id) {
+        if (!confirm('Are you sure you want to delete this income?')) return;
+        try {
+            const res = await fetch(`/tracker/api/incomes/${id}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            });
+            if (res.ok) loadIncomes();
+            else alert('Failed to delete income');
+        } catch (err) {
+            console.error('Failed to delete income:', err);
+        }
+    }
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const fd = new FormData(form);
+        const data = {
+            description: fd.get('description'),
+            amount: fd.get('amount'),
+            income_type: fd.get('income_type'),
+            date: fd.get('date'),
+            notes: fd.get('notes') || ''
+        };
+
+        try {
+            const url = editingId ? `/tracker/api/incomes/${editingId}/` : '/tracker/api/incomes/';
+            const method = editingId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                closeModal();
+                form.reset();
+                loadIncomes();
+            } else {
+                const error = await res.json();
+                alert('Failed to save: ' + JSON.stringify(error));
+            }
+        } catch (err) {
+            console.error('Failed to save income:', err);
+        }
+    });
+
+    addBtn.addEventListener('click', () => openModal());
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeModal();
+    });
+
+    searchInput.addEventListener('input', applySearch);
+    filterType.addEventListener('change', () => loadIncomes());
+    filterMonth.addEventListener('change', () => loadIncomes());
+
+    // Init
+    loadTypes();
+    loadIncomes();
+});
+</script>
+{% endblock %}

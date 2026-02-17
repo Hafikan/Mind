@@ -46,14 +46,18 @@ class Banks(models.Model):
 
 class Debts(models.Model):
     user = models.ForeignKey(AppUser, related_name="debt", on_delete=models.CASCADE)
-    total_debt = models.DecimalField(max_digits=10,decimal_places=2)
+    total_debt = models.DecimalField(max_digits=10, decimal_places=2)
     min_payment_coeff = models.DecimalField(max_digits=3, decimal_places=2)
-    bank = models.ForeignKey(Banks, on_delete = models.RESTRICT, verbose_name="bank") 
+    bank = models.ForeignKey(Banks, on_delete=models.RESTRICT, verbose_name="bank")
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     cutoff_date = models.DateField(blank=True, null=True)
 
+    @property
+    def is_closed(self):
+        return (self.amount_paid or 0) >= self.total_debt
+
     class Meta:
-        unique_together = ("user","total_debt", "bank")
+        unique_together = ("user", "total_debt", "bank")
 
 class Credits(models.Model):
     user = models.ForeignKey(AppUser, related_name="credits", on_delete=models.CASCADE)
@@ -66,3 +70,41 @@ class Credits(models.Model):
 
     class Meta:
         unique_together = ("user","bank","total_debt")
+
+
+class Income(models.Model):
+    class IncomeType(models.TextChoices):
+        SALARY = 'salary', 'Salary'
+        SIDE_JOB = 'side_job', 'Side Job'
+        ASSETS = 'assets', 'Assets'
+        FREELANCE = 'freelance', 'Freelance'
+        INVESTMENT = 'investment', 'Investment'
+        OTHER = 'other', 'Other'
+
+    user = models.ForeignKey(AppUser, related_name="incomes", on_delete=models.CASCADE)
+    description = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    income_type = models.CharField(max_length=20, choices=IncomeType.choices, default=IncomeType.SALARY)
+    date = models.DateField()
+    notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.description} - {self.amount}"
+
+    class Meta:
+        verbose_name = "Income"
+        verbose_name_plural = "Incomes"
+
+
+class Shopping(models.Model):
+    user = models.ForeignKey(AppUser, related_name="shopping", on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField()
+
+    def __str__(self):
+        return f"{self.name} - {self.price}"
+
+    class Meta:
+        verbose_name = "Shopping"
+        verbose_name_plural = "Shopping"

@@ -1,6 +1,21 @@
 // Mind - Main JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+
+    if (localStorage.getItem('sidebarExpanded') === 'true') {
+        sidebar.classList.add('expanded');
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('expanded');
+            localStorage.setItem('sidebarExpanded', sidebar.classList.contains('expanded'));
+        });
+    }
+
     // Handle sidebar item clicks
     const sidebarItems = document.querySelectorAll('.sidebar-item:not(.sidebar-menu-trigger)');
     sidebarItems.forEach(item => {

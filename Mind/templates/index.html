@@ -11,6 +11,17 @@
 <body>
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
+        <!-- Toggle Button -->
+        <div class="sidebar-toggle-section">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Sidebar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
         <!-- Profile Section (Top) -->
         <div class="sidebar-profile-section">
             <button class="profile-trigger" id="profileTrigger" aria-label="Open Profile Menu">
@@ -44,7 +55,7 @@
 
         <!-- Navigation -->
         <nav class="sidebar-nav">
-            <a href="#" class="sidebar-item active">
+            <a href="{% url 'expense_tracker:dashboard' %}" class="sidebar-item active">
                 <span class="item-icon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -71,6 +82,17 @@
                     </span>
                 </button>
                 <div class="sidebar-submenu" id="expenseTrackerSubmenu">
+                    <a href="{% url 'expense_tracker:dashboard' %}" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Dashboard</span>
+                    </a>
                     <a href="{% url 'expense_tracker:expenses' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -121,6 +143,26 @@
                             </svg>
                         </span>
                         <span class="subitem-text">Credits</span>
+                    </a>
+                    <a href="{% url 'expense_tracker:income' %}" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                <polyline points="8 4 12 1 16 4"></polyline>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Income</span>
+                    </a>
+                    <a href="{% url 'expense_tracker:shopping' %}" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="9" cy="21" r="1"></circle>
+                                <circle cx="20" cy="21" r="1"></circle>
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Shopping</span>
                     </a>
                 </div>
             </div>
