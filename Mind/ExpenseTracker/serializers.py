@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import ExpenseCategory
 from .models import Expense
 from .models import Banks
-
+from .models import Asset
 from .models import Debts
 from .models import Credits, CreditInstallment
 from .models import Income
@@ -188,3 +188,22 @@ class ShoppingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+
+class AssetsSerializer(serializers.ModelSerializer):
+    
+    asset_type = serializers.CharField(source="asset_type.name", read_only=True)
+    class Meta:
+        model = Asset
+        fields = (
+            "id",
+            "asset_type",
+            "symbol",
+            "purchase_date",
+            "purchase_price",
+            "quantity",
+            "current_price",
+            "last_price_update",
+            "notes"
+        )
+        

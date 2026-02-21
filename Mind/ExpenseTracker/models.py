@@ -124,3 +124,36 @@ class Shopping(models.Model):
     class Meta:
         verbose_name = "Shopping"
         verbose_name_plural = "Shopping"
+        
+        
+        
+class AssetType(models.Model):
+    name = models.CharField("AssetName",)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="asset_type")
+    created_at = models.DateField(auto_now_add=True)
+    color = models.CharField(max_length=7, blank=True, null=True)
+    
+    class Meta:
+        unique_together = ("user", "name")
+    
+    def __str__(self):
+        return self.name
+    
+class Asset(models.Model):
+    user  = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name='assets')
+    asset_type = models.ForeignKey(AssetType,on_delete=models.CASCADE,related_name="asset_type")
+    symbol = models.CharField(max_length=200, unique=True)
+    purchase_date = models.DateField()
+    purchase_price = models.DecimalField(max_digits=15, decimal_places=4)
+    quantity = models.DecimalField(max_digits=15, decimal_places=8)
+    current_price = models.DecimalField(max_digits=15, decimal_places=4, null=True, blank = True)
+    last_price_update = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-purchase_date']
+
+    def __str__(self):
+        return f"{self.symbol}-{self.quantity}"
+    
+    
