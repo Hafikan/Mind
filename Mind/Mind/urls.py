@@ -22,6 +22,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('Accounts.urls')),
     path('tracker/', include('ExpenseTracker.urls')),
+    path('career/', include('CareerPath.urls')),
+    path('notebook/', include('Notebook.urls')),
 ]
 
 if settings.DEBUG:

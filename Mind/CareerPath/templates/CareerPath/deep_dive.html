@@ -1,0 +1,99 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block title %}{{ deep_dive.title }} — Career Path{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'CareerPath/css/roadmap.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="career-root">
+  <div class="container">
+
+    <div class="cp-top-actions">
+      <a href="{% url 'career_path:roadmap' %}" class="cp-btn">← Yol haritası</a>
+      <a href="{% url 'career_path:manage' %}?edit_dd={{ deep_dive.id }}" class="cp-btn">Düzenle</a>
+    </div>
+
+    <section class="deep-section">
+      <div class="deep-header">
+        <div>
+          <h2>{{ deep_dive.title }}</h2>
+          {% if deep_dive.tagline %}<p class="deep-tagline">{{ deep_dive.tagline }}</p>{% endif %}
+        </div>
+        <div class="deep-meta">
+          {% if meta_pills %}
+            <div class="deep-meta-row">
+              {% for pill in meta_pills %}
+                <span class="deep-meta-pill">{{ pill }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+          <div class="deep-meta-row">
+            <span class="deep-meta-pill priority-{{ deep_dive.priority }}">öncelik: {{ deep_dive.get_priority_display }}</span>
+          </div>
+        </div>
+      </div>
+
+      {% if deep_dive.overview %}
+        <div class="deep-overview">{{ deep_dive.overview }}</div>
+      {% endif %}
+
+      {% if deep_dive.topics.all %}
+        <div class="topic-table">
+          <div class="topic-table-header">
+            <div>#</div>
+            <div>Konu</div>
+            <div>Kavramlar</div>
+            <div>Senin domain'inde</div>
+            <div>AI nasıl kullanılır</div>
+          </div>
+          {% for topic in deep_dive.topics.all %}
+            <div class="topic-row">
+              <div class="topic-num">{{ topic.num }}</div>
+              <div class="topic-name">
+                {{ topic.name }}
+                {% if topic.sub_title %}<span class="topic-sub">{{ topic.sub_title }}</span>{% endif %}
+              </div>
+              <div class="topic-concepts">
+                {% for c in topic.concepts.all %}
+                  <span class="concept-tag">{{ c.text }}</span>
+                {% endfor %}
+              </div>
+              <div class="topic-domain">{{ topic.domain_text }}</div>
+              <div class="topic-ai">{{ topic.ai_text }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-cell">Henüz konu eklenmemiş.</div>
+      {% endif %}
+
+      {% if deep_dive.resources.all %}
+        <div class="deep-resources">
+          <h3>Kaynaklar</h3>
+          <div class="resources-grid">
+            {% for r in deep_dive.resources.all %}
+              <div class="resource-card">
+                <div class="res-type">{{ r.res_type }}</div>
+                <div class="res-title">{{ r.title }}</div>
+                {% if r.meta %}<div class="res-meta">{{ r.meta }}</div>{% endif %}
+                {% if r.link %}<span class="res-link">{{ r.link }}</span>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if deep_dive.strategy %}
+        <div class="deep-strategy">
+          <h3>Strateji</h3>
+          {{ deep_dive.strategy }}
+        </div>
+      {% endif %}
+    </section>
+
+  </div>
+</div>
+{% endblock %}

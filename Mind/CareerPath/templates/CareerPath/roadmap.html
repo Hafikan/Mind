@@ -1,0 +1,82 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block title %}Career Path - Mind{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'CareerPath/css/roadmap.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="career-root">
+  <div class="container">
+
+    <header class="cp-header">
+      <div>
+        <h1>Career Path — yol haritan</h1>
+        <p class="subtitle">Fazlar × Kategoriler. Görevleri tıkla, detay aç. Onay kutusuyla tamamla, ilerlemen kayıt edilir.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Toplam görev</div><div class="stat-value" id="stat-total">—</div></div>
+        <div class="stat"><div class="stat-label">Tamamlanan</div><div class="stat-value" id="stat-done">0</div></div>
+        <div class="stat"><div class="stat-label">İlerleme</div><div class="stat-value" id="stat-pct">0%</div></div>
+      </div>
+    </header>
+
+    <div class="cp-top-actions">
+      <a href="{% url 'career_path:manage' %}" class="cp-btn cp-btn-primary">+ Yönet (faz / kategori / deep dive)</a>
+    </div>
+
+    <div class="nav-bar" id="deep-dive-nav">
+      <span class="filter-label" style="padding: 8px 4px;">Deep dives:</span>
+      <span class="filter-label" id="dd-empty" style="padding: 8px 4px; display:none;">— henüz yok, yönet sayfasından ekle.</span>
+    </div>
+
+    <div class="controls">
+      <div class="filter-group">
+        <span class="filter-label">Kategori:</span>
+        <button class="filter-btn active" data-cat="all">Hepsi</button>
+        <span id="category-filters"></span>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Tip:</span>
+        <button class="filter-btn active" data-type="all">Hepsi</button>
+        <button class="filter-btn" data-type="book">Kitap</button>
+        <button class="filter-btn" data-type="project">Proje</button>
+        <button class="filter-btn" data-type="cert">Sertifika</button>
+      </div>
+      <input type="text" class="search-input" placeholder="Ara: başlık veya açıklama..." id="search">
+    </div>
+
+    <div class="legend" id="legend">
+      <div class="legend-item" style="margin-left:auto;"><span class="badge deep">deep</span> &nbsp;Derin alt yapı var</div>
+    </div>
+
+    <div class="matrix-wrapper">
+      <div class="matrix" id="matrix-grid"></div>
+    </div>
+
+    <div id="empty-state" style="display:none;" class="empty-cell">
+      Henüz faz veya kategori yok. <a href="{% url 'career_path:manage' %}" style="color: var(--accent-ai);">Yönet sayfasından</a> başla.
+    </div>
+
+  </div>
+
+  <div class="cp-modal-overlay" id="modal-overlay">
+    <div class="cp-modal" id="modal">
+      <button class="cp-modal-close" id="modal-close">×</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  window.CAREER_URLS = {
+    api: "{% url 'career_path:phase-list' %}".replace('/phases/', '/'),
+    deepDivePath: "{% url 'career_path:roadmap' %}deep/"
+  };
+</script>
+<script src="{% static 'CareerPath/js/roadmap.js' %}"></script>
+{% endblock %}

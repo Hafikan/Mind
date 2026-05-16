@@ -168,6 +168,59 @@
             </div>
 
 
+            <!-- Career Path Menu -->
+            <div class="sidebar-menu">
+                <button class="sidebar-item sidebar-menu-trigger" id="careerPathTrigger">
+                    <span class="item-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 9 6 9 14 15 14 15 22 21 22"></polyline>
+                            <polyline points="3 18 5 18 5 12 11 12"></polyline>
+                            <circle cx="9" cy="6" r="1"></circle>
+                            <circle cx="15" cy="14" r="1"></circle>
+                            <circle cx="21" cy="22" r="1"></circle>
+                        </svg>
+                    </span>
+                    <span class="item-text">Career Path</span>
+                    <span class="menu-chevron">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </span>
+                </button>
+                <div class="sidebar-submenu" id="careerPathSubmenu">
+                    <a href="{% url 'career_path:roadmap' %}" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                                <line x1="8" y1="2" x2="8" y2="18"></line>
+                                <line x1="16" y1="6" x2="16" y2="22"></line>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Yol Haritası</span>
+                    </a>
+                    <a href="{% url 'career_path:manage' %}" class="sidebar-subitem">
+                        <span class="subitem-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                        </span>
+                        <span class="subitem-text">Yönet</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Notebook -->
+            <a href="{% url 'notebook:index' %}" class="sidebar-item">
+                <span class="item-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                </span>
+                <span class="item-text">Notebook</span>
+            </a>
+
             <a href="#" class="sidebar-item">
                 <span class="item-icon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -177,6 +230,8 @@
                 </span>
                 <span class="item-text">Settings</span>
             </a>
+
+            {% block sidebar_extra %}{% endblock %}
         </nav>
     </aside>
 

@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Accounts.apps.AccountsConfig',
     'ExpenseTracker.apps.ExpensetrackerConfig',
+    'CareerPath.apps.CareerpathConfig',
+    'Notebook.apps.NotebookConfig',
     'rest_framework',
 ]
 

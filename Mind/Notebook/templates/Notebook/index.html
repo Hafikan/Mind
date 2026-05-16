@@ -1,0 +1,78 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block title %}Notebook - Mind{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'Notebook/css/notebook.css' %}">
+{% endblock %}
+
+{% block sidebar_extra %}
+<div class="nb-sidebar-pane">
+    <div class="nb-side-section">
+        <div class="nb-side-title">Klasörler</div>
+        <div class="nb-tree" id="nb-tree"></div>
+    </div>
+    <div class="nb-side-section">
+        <div class="nb-side-title">Etiketler</div>
+        <div class="nb-tags" id="nb-tags"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="nb-root" data-initial-note="{{ initial_note_id|default:'' }}">
+
+  <header class="nb-topbar">
+    <div class="nb-search-wrap">
+      <input type="text" class="nb-input" id="nb-search" placeholder="Ara: başlık veya içerik..." autocomplete="off">
+      <div class="nb-search-results" id="nb-search-results"></div>
+    </div>
+    <div class="nb-top-actions">
+      <button class="nb-btn" id="nb-new-folder" title="Yeni klasör">+ Klasör</button>
+      <button class="nb-btn nb-btn-primary" id="nb-new-note" title="Yeni not">+ Not</button>
+    </div>
+  </header>
+
+  <main class="nb-main" id="nb-main">
+    <div class="nb-welcome" id="nb-welcome">
+      <h2>Notebook</h2>
+      <p>Sol sidebar'dan bir not seç ya da <strong>+ Not</strong> ile yenisini oluştur. Markdown yazabilir, <code>[[wiki-link]]</code> ile notları birbirine bağlayabilir, <code>#etiket</code> ekleyebilirsin.</p>
+    </div>
+
+    <div class="nb-editor-wrap" id="nb-editor-wrap" hidden>
+      <div class="nb-note-header">
+        <input type="text" class="nb-input nb-title-input" id="nb-title" placeholder="Başlık" autocomplete="off">
+        <div class="nb-note-meta">
+          <span class="nb-save-indicator" id="nb-save-indicator">—</span>
+          <button class="nb-btn nb-btn-icon" id="nb-delete-note" title="Sil">🗑</button>
+        </div>
+      </div>
+
+      <div class="nb-split">
+        <textarea class="nb-editor" id="nb-content" placeholder="# Başlık&#10;&#10;Markdown yazmaya başla...&#10;&#10;[[Başka Not]] ile bağlan, #etiket ile etiketle."></textarea>
+        <div class="nb-preview markdown-body" id="nb-preview"></div>
+      </div>
+
+      <div class="nb-backlinks" id="nb-backlinks" hidden>
+        <h3>Backlinks</h3>
+        <div id="nb-backlinks-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modals -->
+  <div class="nb-modal-overlay" id="nb-modal-overlay">
+    <div class="nb-modal" id="nb-modal">
+      <button class="nb-modal-close" id="nb-modal-close">×</button>
+      <div id="nb-modal-content"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<script src="{% static 'Notebook/js/notebook.js' %}"></script>
+{% endblock %}

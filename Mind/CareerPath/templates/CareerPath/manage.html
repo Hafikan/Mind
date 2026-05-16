@@ -1,0 +1,80 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block title %}Career Path — Yönet{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'CareerPath/css/roadmap.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="career-root">
+  <div class="container">
+
+    <header class="cp-header">
+      <div>
+        <h1>Career Path yönetim</h1>
+        <p class="subtitle">Fazları, kategorileri, görevleri ve derin bölümleri buradan ekle ve düzenle.</p>
+      </div>
+      <div>
+        <a href="{% url 'career_path:roadmap' %}" class="cp-btn">← Yol haritası</a>
+      </div>
+    </header>
+
+    <div class="nav-bar" role="tablist">
+      <button class="nav-item active" data-tab="phases">Fazlar</button>
+      <button class="nav-item" data-tab="categories">Kategoriler</button>
+      <button class="nav-item" data-tab="tasks">Görevler</button>
+      <button class="nav-item" data-tab="deepdives">Deep Dive'lar</button>
+    </div>
+
+    <!-- PHASES TAB -->
+    <section class="cp-section" data-pane="phases">
+      <div class="cp-section-header">
+        <h2>Fazlar</h2>
+        <button class="cp-btn cp-btn-primary" data-action="new-phase">+ Yeni faz</button>
+      </div>
+      <div class="cp-list" id="phase-list"></div>
+    </section>
+
+    <!-- CATEGORIES TAB -->
+    <section class="cp-section" data-pane="categories" hidden>
+      <div class="cp-section-header">
+        <h2>Kategoriler</h2>
+        <button class="cp-btn cp-btn-primary" data-action="new-category">+ Yeni kategori</button>
+      </div>
+      <div class="cp-list" id="category-list"></div>
+    </section>
+
+    <!-- TASKS TAB -->
+    <section class="cp-section" data-pane="tasks" hidden>
+      <div class="cp-section-header">
+        <h2>Görevler</h2>
+        <button class="cp-btn cp-btn-primary" data-action="new-task">+ Yeni görev</button>
+      </div>
+      <div class="cp-list" id="task-list"></div>
+    </section>
+
+    <!-- DEEPDIVES TAB -->
+    <section class="cp-section" data-pane="deepdives" hidden>
+      <div class="cp-section-header">
+        <h2>Deep Dive bölümleri</h2>
+        <button class="cp-btn cp-btn-primary" data-action="new-deepdive">+ Yeni deep dive</button>
+      </div>
+      <div class="cp-list" id="deepdive-list"></div>
+    </section>
+
+  </div>
+
+  <div class="cp-modal-overlay" id="cp-modal-overlay">
+    <div class="cp-modal" id="cp-modal" style="max-width: 720px;">
+      <button class="cp-modal-close" id="cp-modal-close">×</button>
+      <div id="cp-modal-content"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'CareerPath/js/manage.js' %}"></script>
+{% endblock %}
