@@ -66,6 +66,12 @@ class Migration(migrations.Migration):
         ),
         # Çakışan order'ları kullanıcı başına 0..N-1 yap (UNIQUE constraint öncesi)
         migrations.RunPython(renumber_orders, noop_reverse),
+        # Phase unique_together'i num kaldırılmadan önce değiştir; aksi halde
+        # Django eski ("user", "num") indexini düşürmek için num alanını arar.
+        migrations.AlterUniqueTogether(
+            name="phase",
+            unique_together={("user", "order")},
+        ),
         # Eski num/time_range kaldır
         migrations.RemoveField(
             model_name="phase",
@@ -74,11 +80,6 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name="phase",
             name="time_range",
-        ),
-        # Unique constraints en sonda
-        migrations.AlterUniqueTogether(
-            name="phase",
-            unique_together={("user", "order")},
         ),
         migrations.AlterUniqueTogether(
             name="category",
