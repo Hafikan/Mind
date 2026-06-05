@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,7 +13,7 @@
     <aside class="sidebar" id="sidebar">
         <!-- Toggle Button -->
         <div class="sidebar-toggle-section">
-            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Sidebar">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Kenar Çubuğunu Aç/Kapat">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="3" y1="12" x2="21" y2="12"></line>
                     <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -24,7 +24,7 @@
 
         <!-- Profile Section (Top) -->
         <div class="sidebar-profile-section">
-            <button class="profile-trigger" id="profileTrigger" aria-label="Open Profile Menu">
+            <button class="profile-trigger" id="profileTrigger" aria-label="Profil Menüsünü Aç">
                 <div class="profile-avatar">
                     {% if user.is_authenticated and user.profile.avatar %}
                         <img src="{{ user.profile.avatar.url }}" alt="Avatar">
@@ -42,7 +42,7 @@
                     {% if user.is_authenticated %}
                         {{ user.username }}
                     {% else %}
-                        Guest
+                        Misafir
                     {% endif %}
                 </span>
                 <span class="profile-chevron">
@@ -62,7 +62,7 @@
                         <polyline points="9 22 9 12 15 12 15 22"></polyline>
                     </svg>
                 </span>
-                <span class="item-text">Dashboard</span>
+                <span class="item-text">Gösterge Paneli</span>
             </a>
 
             <!-- Expense Tracker Menu -->
@@ -74,7 +74,7 @@
                             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                         </svg>
                     </span>
-                    <span class="item-text">Expense Tracker</span>
+                    <span class="item-text">Gider Takibi</span>
                     <span class="menu-chevron">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="6 9 12 15 18 9"></polyline>
@@ -91,7 +91,7 @@
                                 <rect x="3" y="14" width="7" height="7"></rect>
                             </svg>
                         </span>
-                        <span class="subitem-text">Dashboard</span>
+                        <span class="subitem-text">Gösterge Paneli</span>
                     </a>
                     <a href="{% url 'expense_tracker:expenses' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
@@ -100,7 +100,7 @@
                                 <line x1="1" y1="10" x2="23" y2="10"></line>
                             </svg>
                         </span>
-                        <span class="subitem-text">Expenses</span>
+                        <span class="subitem-text">Giderler</span>
                     </a>
                     <a href="{% url 'expense_tracker:categories' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
@@ -109,7 +109,7 @@
                                 <line x1="7" y1="7" x2="7.01" y2="7"></line>
                             </svg>
                         </span>
-                        <span class="subitem-text">Categories</span>
+                        <span class="subitem-text">Kategoriler</span>
                     </a>
                     <a href="{% url 'expense_tracker:banks' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
@@ -124,7 +124,7 @@
                                 <path d="M16 14v3"></path>
                             </svg>
                         </span>
-                        <span class="subitem-text">Banks</span>
+                        <span class="subitem-text">Bankalar</span>
                     </a>
                     <a href="{% url 'expense_tracker:debts' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
@@ -133,7 +133,7 @@
                                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                             </svg>
                         </span>
-                        <span class="subitem-text">Debts</span>
+                        <span class="subitem-text">Borçlar</span>
                     </a>
                     <a href="{% url 'expense_tracker:credits' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
@@ -142,7 +142,7 @@
                                 <line x1="1" y1="10" x2="23" y2="10"></line>
                             </svg>
                         </span>
-                        <span class="subitem-text">Credits</span>
+                        <span class="subitem-text">Krediler</span>
                     </a>
                     <a href="{% url 'expense_tracker:income' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
@@ -152,7 +152,7 @@
                                 <polyline points="8 4 12 1 16 4"></polyline>
                             </svg>
                         </span>
-                        <span class="subitem-text">Income</span>
+                        <span class="subitem-text">Gelir</span>
                     </a>
                     <a href="{% url 'expense_tracker:shopping' %}" class="sidebar-subitem">
                         <span class="subitem-icon">
@@ -162,7 +162,7 @@
                                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                             </svg>
                         </span>
-                        <span class="subitem-text">Shopping</span>
+                        <span class="subitem-text">Alışveriş</span>
                     </a>
                 </div>
             </div>
@@ -180,7 +180,7 @@
                             <circle cx="21" cy="22" r="1"></circle>
                         </svg>
                     </span>
-                    <span class="item-text">Career Path</span>
+                    <span class="item-text">Kariyer Yolu</span>
                     <span class="menu-chevron">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="6 9 12 15 18 9"></polyline>
@@ -218,7 +218,7 @@
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                     </svg>
                 </span>
-                <span class="item-text">Notebook</span>
+                <span class="item-text">Not Defteri</span>
             </a>
 
             <a href="#" class="sidebar-item">
@@ -228,7 +228,7 @@
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                     </svg>
                 </span>
-                <span class="item-text">Settings</span>
+                <span class="item-text">Ayarlar</span>
             </a>
 
             {% block sidebar_extra %}{% endblock %}
@@ -258,14 +258,14 @@
                         {% if user.is_authenticated %}
                             {{ user.username }}
                         {% else %}
-                            Guest
+                            Misafir
                         {% endif %}
                     </span>
                     <span class="popup-email">
                         {% if user.is_authenticated %}
-                            {{ user.email|default:"No email" }}
+                            {{ user.email|default:"E-posta yok" }}
                         {% else %}
-                            Not logged in
+                            Giriş yapılmadı
                         {% endif %}
                     </span>
                 </div>
@@ -276,7 +276,7 @@
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
                     </svg>
-                    <span>My Account</span>
+                    <span>Hesabım</span>
                 </a>
             </nav>
             {% if user.is_authenticated %}
@@ -289,7 +289,7 @@
                             <polyline points="16 17 21 12 16 7"></polyline>
                             <line x1="21" y1="12" x2="9" y2="12"></line>
                         </svg>
-                        <span>Log out</span>
+                        <span>Çıkış Yap</span>
                     </button>
                 </form>
             </div>
@@ -298,7 +298,7 @@
 
         <!-- Popup Content -->
         <div class="popup-content">
-            <button class="popup-close" id="popupClose" aria-label="Close">
+            <button class="popup-close" id="popupClose" aria-label="Kapat">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -307,10 +307,10 @@
 
             <!-- My Account Panel -->
             <div class="popup-panel active" id="panel-account">
-                <h2 class="popup-panel-title">My Account</h2>
+                <h2 class="popup-panel-title">Hesabım</h2>
                 <div class="popup-panel-body">
                     <div class="account-section">
-                        <label class="account-label">Profile Photo</label>
+                        <label class="account-label">Profil Fotoğrafı</label>
                         <div class="account-avatar-upload">
                             <div class="account-avatar">
                                 {% if user.is_authenticated and user.profile.avatar %}
@@ -325,18 +325,18 @@
                                     </span>
                                 {% endif %}
                             </div>
-                            <button class="btn btn-outline btn-sm">Change Photo</button>
+                            <button class="btn btn-outline btn-sm">Fotoğrafı Değiştir</button>
                         </div>
                     </div>
 
                     <div class="account-section">
-                        <label class="account-label">Username</label>
-                        <input type="text" class="input-neon" value="{% if user.is_authenticated %}{{ user.username }}{% endif %}" placeholder="Username">
+                        <label class="account-label">Kullanıcı Adı</label>
+                        <input type="text" class="input-neon" value="{% if user.is_authenticated %}{{ user.username }}{% endif %}" placeholder="Kullanıcı Adı">
                     </div>
 
                     <div class="account-section">
-                        <label class="account-label">Email</label>
-                        <input type="email" class="input-neon" value="{% if user.is_authenticated %}{{ user.email }}{% endif %}" placeholder="Email">
+                        <label class="account-label">E-posta</label>
+                        <input type="email" class="input-neon" value="{% if user.is_authenticated %}{{ user.email }}{% endif %}" placeholder="E-posta">
                     </div>
                 </div>
             </div>

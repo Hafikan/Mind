@@ -1,16 +1,16 @@
 {% extends 'index.html' %}
 
-{% block title %}Shopping - Mind{% endblock %}
+{% block title %}Alışveriş - Mind{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Shopping</h1>
+    <h1 class="page-title">Alışveriş</h1>
     <button class="btn btn-primary" id="addShoppingBtn">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span>Add Item</span>
+        <span>Ürün Ekle</span>
     </button>
 </div>
 
@@ -25,7 +25,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Spending</span>
+            <span class="summary-label">Toplam Harcama</span>
             <span class="summary-value" id="totalShopping" style="color: #f97316;">₺0,00</span>
         </div>
     </div>
@@ -39,7 +39,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Items</span>
+            <span class="summary-label">Toplam Ürün</span>
             <span class="summary-value" id="totalItems">0</span>
         </div>
     </div>
@@ -52,7 +52,7 @@
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="searchInput" class="input-neon" placeholder="Search items...">
+        <input type="text" id="searchInput" class="input-neon" placeholder="Ürünlerde ara...">
     </div>
     <input type="month" id="filterMonth" class="input-neon">
 </div>
@@ -63,10 +63,10 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Price</th>
-                    <th>Date</th>
-                    <th>Actions</th>
+                    <th>Ad</th>
+                    <th>Fiyat</th>
+                    <th>Tarih</th>
+                    <th>İşlemler</th>
                 </tr>
             </thead>
             <tbody id="shoppingTableBody">
@@ -78,8 +78,8 @@
                                 <circle cx="20" cy="21" r="1"></circle>
                                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                             </svg>
-                            <p>No items found</p>
-                            <span class="text-muted">Add your first shopping item</span>
+                            <p>Ürün bulunamadı</p>
+                            <span class="text-muted">İlk alışveriş ürününüzü ekleyin</span>
                         </div>
                     </td>
                 </tr>
@@ -92,7 +92,7 @@
 <div class="modal-overlay" id="shoppingModalOverlay">
     <div class="modal" id="shoppingModal">
         <div class="modal-header">
-            <h2 class="modal-title">Add Item</h2>
+            <h2 class="modal-title">Ürün Ekle</h2>
             <button class="modal-close" id="closeShoppingModal">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -103,24 +103,24 @@
         <div class="modal-body">
             <form id="shoppingForm">
                 <div class="form-group">
-                    <label class="form-label">Name</label>
-                    <input type="text" name="name" class="input-neon" placeholder="Item name" required>
+                    <label class="form-label">Ad</label>
+                    <input type="text" name="name" class="input-neon" placeholder="Ürün adı" required>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Price</label>
+                        <label class="form-label">Fiyat</label>
                         <input type="number" step="0.01" name="price" class="input-neon" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Date</label>
+                        <label class="form-label">Tarih</label>
                         <input type="date" name="date" class="input-neon" required>
                     </div>
                 </div>
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-outline" id="cancelShoppingBtn">Cancel</button>
-            <button class="btn btn-primary" type="submit" form="shoppingForm">Save</button>
+            <button class="btn btn-outline" id="cancelShoppingBtn">İptal</button>
+            <button class="btn btn-primary" type="submit" form="shoppingForm">Kaydet</button>
         </div>
     </div>
 </div>
@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle>
                             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                         </svg>
-                        <p>No items found</p>
+                        <p>Ürün bulunamadı</p>
                     </div>
                 </td></tr>`;
             return;
@@ -212,13 +212,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${i.date}</td>
                 <td>
                     <div class="action-btns">
-                        <button class="action-btn edit-btn" title="Edit">
+                        <button class="action-btn edit-btn" title="Düzenle">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button class="action-btn delete delete-btn" title="Delete">
+                        <button class="action-btn delete delete-btn" title="Sil">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(item => { if (item) openModal(item); });
         }
         if (e.target.closest('.delete-btn')) {
-            if (!confirm('Delete this item?')) return;
+            if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return;
             fetch(`/tracker/api/shopping/${id}/`, {
                 method: 'DELETE',
                 headers: { 'X-CSRFToken': getCookie('csrftoken') }
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function openModal(item = null) {
         editingId = item ? item.id : null;
-        modalTitle.textContent = item ? 'Edit Item' : 'Add Item';
+        modalTitle.textContent = item ? 'Ürün Düzenle' : 'Ürün Ekle';
         if (item) {
             form.querySelector('[name="name"]').value = item.name;
             form.querySelector('[name="price"]').value = item.price;
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(data)
             });
             if (res.ok) { closeModal(); form.reset(); loadItems(); }
-            else { const err = await res.json(); alert('Failed: ' + JSON.stringify(err)); }
+            else { const err = await res.json(); alert('Başarısız: ' + JSON.stringify(err)); }
         } catch (e) { console.error(e); }
     });
 

@@ -1,16 +1,16 @@
 {% extends 'index.html' %}
 
-{% block title %}Debts - Mind{% endblock %}
+{% block title %}Borçlar - Mind{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Debts</h1>
+    <h1 class="page-title">Borçlar</h1>
     <button class="btn btn-primary" id="addDebtBtn">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span>Add Debt</span>
+        <span>Borç Ekle</span>
     </button>
 </div>
 
@@ -24,7 +24,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Debt</span>
+            <span class="summary-label">Toplam Borç</span>
             <span class="summary-value text-danger" id="summaryTotalDebt">₺0,00</span>
         </div>
     </div>
@@ -36,7 +36,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Paid</span>
+            <span class="summary-label">Toplam Ödenen</span>
             <span class="summary-value text-success" id="summaryTotalPaid">₺0,00</span>
         </div>
     </div>
@@ -48,7 +48,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Remaining</span>
+            <span class="summary-label">Kalan</span>
             <span class="summary-value" id="summaryRemaining">₺0,00</span>
         </div>
     </div>
@@ -62,7 +62,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Carry Over</span>
+            <span class="summary-label">Devir</span>
             <span class="summary-value" id="summaryCarryOver" style="color: #a855f7;">₺0,00</span>
         </div>
     </div>
@@ -75,7 +75,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">New Spending</span>
+            <span class="summary-label">Yeni Harcama</span>
             <span class="summary-value" id="summaryNewSpending" style="color: #f97316;">₺0,00</span>
         </div>
     </div>
@@ -88,7 +88,7 @@
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="searchInput" class="input-neon" placeholder="Search debts...">
+        <input type="text" id="searchInput" class="input-neon" placeholder="Borçlarda ara...">
     </div>
     <input type="month" id="filterMonth" class="input-neon">
 </div>
@@ -99,15 +99,15 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Status</th>
-                    <th>Bank</th>
-                    <th>Total Debt</th>
-                    <th>Carry Over</th>
-                    <th>New Spending</th>
-                    <th>Min Payment</th>
-                    <th>Amount Paid</th>
-                    <th>Cutoff Date</th>
-                    <th>Actions</th>
+                    <th>Durum</th>
+                    <th>Banka</th>
+                    <th>Toplam Borç</th>
+                    <th>Devir</th>
+                    <th>Yeni Harcama</th>
+                    <th>Asgari Ödeme</th>
+                    <th>Ödenen Tutar</th>
+                    <th>Kesim Tarihi</th>
+                    <th>İşlemler</th>
                 </tr>
             </thead>
             <tbody>
@@ -118,8 +118,8 @@
                                 <path d="M12 2v20"></path>
                                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                             </svg>
-                            <p>No debts recorded</p>
-                            <span class="text-muted">Add a debt to start tracking payments</span>
+                            <p>Kayıtlı borç yok</p>
+                            <span class="text-muted">Ödeme takibine başlamak için bir borç ekleyin</span>
                         </div>
                     </td>
                 </tr>
@@ -132,7 +132,7 @@
 <div class="modal-overlay" id="debtModalOverlay">
     <div class="modal" id="debtModal">
         <div class="modal-header">
-            <h2 class="modal-title">Add Debt</h2>
+            <h2 class="modal-title">Borç Ekle</h2>
             <button class="modal-close" id="closeDebtModal">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -143,36 +143,36 @@
         <div class="modal-body">
             <form id="debtForm">
                 <div class="form-group">
-                    <label class="form-label">Bank</label>
+                    <label class="form-label">Banka</label>
                     <select name="bank" class="input-neon select-neon" required>
-                        <option value="">Select bank</option>
+                        <option value="">Banka seçin</option>
                     </select>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Total Debt</label>
+                        <label class="form-label">Toplam Borç</label>
                         <input type="number" step="0.01" name="total_debt" class="input-neon" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Min Payment Coefficient</label>
+                        <label class="form-label">Asgari Ödeme Katsayısı</label>
                         <input type="number" step="0.01" max="1" name="min_payment_coeff" class="input-neon" placeholder="0.03" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Amount Paid</label>
+                        <label class="form-label">Ödenen Tutar</label>
                         <input type="number" step="0.01" name="amount_paid" class="input-neon" placeholder="0.00">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Cutoff Date</label>
+                        <label class="form-label">Kesim Tarihi</label>
                         <input type="date" name="cutoff_date" class="input-neon">
                     </div>
                 </div>
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-outline" id="cancelDebtBtn">Cancel</button>
-            <button class="btn btn-primary" type="submit" form="debtForm">Save Debt</button>
+            <button class="btn btn-outline" id="cancelDebtBtn">İptal</button>
+            <button class="btn btn-primary" type="submit" form="debtForm">Borcu Kaydet</button>
         </div>
     </div>
 </div>
@@ -254,8 +254,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <path d="M12 2v20"></path>
                         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                     </svg>
-                    <p>No debts recorded</p>
-                    <span class="text-muted">Add a debt to start tracking payments</span>
+                    <p>Kayıtlı borç yok</p>
+                    <span class="text-muted">Ödeme takibine başlamak için bir borç ekleyin</span>
                 </div>
             </td>
         </tr>
@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 applySearch();
             }
         } catch (error) {
-            console.error('Failed to load debts:', error);
+            console.error('Borçlar yüklenemedi:', error);
         }
     }
 
@@ -342,8 +342,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const isClosed = debt.is_closed;
             const rowClass = isClosed ? 'debt-row-closed' : '';
             const statusBadge = isClosed
-                ? '<span class="status-badge status-closed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>Closed</span>'
-                : '<span class="status-badge status-open"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle></svg>Open</span>';
+                ? '<span class="status-badge status-closed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>Kapalı</span>'
+                : '<span class="status-badge status-open"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle></svg>Açık</span>';
 
             const carryOver = parseFloat(debt.carry_over || 0);
             const newSpending = parseFloat(debt.new_spending || 0);
@@ -360,13 +360,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${debt.cutoff_date || '-'}</td>
                 <td>
                     <div class="action-btns">
-                        <button class="action-btn edit-btn" title="Edit">
+                        <button class="action-btn edit-btn" title="Düzenle">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button class="action-btn delete delete-btn" title="Delete">
+                        <button class="action-btn delete delete-btn" title="Sil">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/tracker/api/banks/');
             if (response.ok) {
                 const banks = await response.json();
-                bankSelect.innerHTML = '<option value="">Select bank</option>';
+                bankSelect.innerHTML = '<option value="">Banka seçin</option>';
                 banks.forEach(bank => {
                     const option = document.createElement('option');
                     option.value = bank.id;
@@ -393,14 +393,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         } catch (error) {
-            console.error('Failed to load banks:', error);
+            console.error('Bankalar yüklenemedi:', error);
         }
     }
 
     async function openModal(debt = null) {
         await loadBanks();
         editingId = debt ? debt.id : null;
-        modalTitle.textContent = debt ? 'Edit Debt' : 'Add Debt';
+        modalTitle.textContent = debt ? 'Borç Düzenle' : 'Borç Ekle';
 
         if (debt) {
             debtForm.querySelector('[name="bank"]').value = debt.bank;
@@ -443,15 +443,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadDebts();
             } else {
                 const error = await response.json();
-                alert('Failed to save: ' + JSON.stringify(error));
+                alert('Kaydetme başarısız: ' + JSON.stringify(error));
             }
         } catch (error) {
-            console.error('Failed to save debt:', error);
+            console.error('Borç kaydedilemedi:', error);
         }
     }
 
     async function deleteDebt(id) {
-        if (!confirm('Are you sure you want to delete this debt?')) return;
+        if (!confirm('Bu borcu silmek istediğinizden emin misiniz?')) return;
 
         try {
             const response = await fetch(`/tracker/api/debts/${id}/`, {
@@ -463,10 +463,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 loadDebts();
             } else {
-                alert('Failed to delete debt');
+                alert('Borç silinemedi');
             }
         } catch (error) {
-            console.error('Failed to delete debt:', error);
+            console.error('Borç silinemedi:', error);
         }
     }
 

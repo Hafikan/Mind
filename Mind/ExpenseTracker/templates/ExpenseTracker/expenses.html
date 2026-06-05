@@ -1,16 +1,16 @@
 {% extends 'index.html' %}
 
-{% block title %}Expenses - Mind{% endblock %}
+{% block title %}Giderler - Mind{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Expenses</h1>
+    <h1 class="page-title">Giderler</h1>
     <button class="btn btn-primary" id="addExpenseBtn">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span>Add Expense</span>
+        <span>Gider Ekle</span>
     </button>
 </div>
 
@@ -24,7 +24,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Expected</span>
+            <span class="summary-label">Toplam Beklenen</span>
             <span class="summary-value">₺0,00</span>
         </div>
     </div>
@@ -36,7 +36,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Actual</span>
+            <span class="summary-label">Toplam Gerçekleşen</span>
             <span class="summary-value">₺0,00</span>
         </div>
     </div>
@@ -50,7 +50,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Expenses</span>
+            <span class="summary-label">Toplam Gider</span>
             <span class="summary-value">0</span>
         </div>
     </div>
@@ -63,10 +63,10 @@
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="searchInput" class="input-neon" placeholder="Search expenses...">
+        <input type="text" id="searchInput" class="input-neon" placeholder="Gider ara...">
     </div>
     <select id="filterCategory" class="input-neon select-neon">
-        <option value="">All Categories</option>
+        <option value="">Tüm Kategoriler</option>
     </select>
     <input type="month" id="filterMonth" class="input-neon">
 </div>
@@ -78,7 +78,7 @@
 <div class="modal-overlay" id="expenseModalOverlay">
     <div class="modal" id="expenseModal">
         <div class="modal-header">
-            <h2 class="modal-title">Add Expense</h2>
+            <h2 class="modal-title">Gider Ekle</h2>
             <button class="modal-close" id="closeExpenseModal">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -89,40 +89,40 @@
         <div class="modal-body">
             <form id="expenseForm">
                 <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <input type="text" name="description" class="input-neon" placeholder="Enter description" required>
+                    <label class="form-label">Açıklama</label>
+                    <input type="text" name="description" class="input-neon" placeholder="Açıklama girin" required>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Expected Amount</label>
+                        <label class="form-label">Beklenen Tutar</label>
                         <input type="number" step="0.01" name="expected_amount" class="input-neon" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Actual Amount</label>
+                        <label class="form-label">Gerçekleşen Tutar</label>
                         <input type="number" step="0.01" name="actual_amount" class="input-neon" placeholder="0.00">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Category</label>
+                        <label class="form-label">Kategori</label>
                         <select name="category" class="input-neon select-neon" required>
-                            <option value="">Select category</option>
+                            <option value="">Kategori seçin</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Pay Day</label>
+                        <label class="form-label">Ödeme Günü</label>
                         <input type="date" name="pay_day" class="input-neon" required>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Notes</label>
-                    <textarea name="notes" class="input-neon textarea-neon" rows="3" placeholder="Optional notes..."></textarea>
+                    <label class="form-label">Notlar</label>
+                    <textarea name="notes" class="input-neon textarea-neon" rows="3" placeholder="İsteğe bağlı notlar..."></textarea>
                 </div>
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-outline" id="cancelExpenseBtn">Cancel</button>
-            <button class="btn btn-primary" type="submit" form="expenseForm">Save Expense</button>
+            <button class="btn btn-outline" id="cancelExpenseBtn">İptal</button>
+            <button class="btn btn-primary" type="submit" form="expenseForm">Gideri Kaydet</button>
         </div>
     </div>
 </div>
@@ -302,8 +302,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
                 <line x1="1" y1="10" x2="23" y2="10"></line>
             </svg>
-            <p>No expenses found</p>
-            <span class="text-muted">Add your first expense to get started</span>
+            <p>Gider bulunamadı</p>
+            <span class="text-muted">Başlamak için ilk giderini ekle</span>
         </div>
     `;
 
@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function groupByCategory(expenses) {
         const groups = {};
         expenses.forEach(exp => {
-            const catName = exp.category_name || 'Uncategorized';
+            const catName = exp.category_name || 'Kategorisiz';
             if (!groups[catName]) {
                 groups[catName] = { expenses: [], color: null };
             }
@@ -423,11 +423,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Description</th>
-                                    <th>Expected</th>
-                                    <th>Actual</th>
-                                    <th>Pay Day</th>
-                                    <th>Actions</th>
+                                    <th>Açıklama</th>
+                                    <th>Beklenen</th>
+                                    <th>Gerçekleşen</th>
+                                    <th>Ödeme Günü</th>
+                                    <th>İşlemler</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -439,13 +439,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <td>${exp.pay_day}</td>
                                     <td>
                                         <div class="action-btns">
-                                            <button class="action-btn edit-btn" title="Edit">
+                                            <button class="action-btn edit-btn" title="Düzenle">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                                 </svg>
                                             </button>
-                                            <button class="action-btn delete delete-btn" title="Delete">
+                                            <button class="action-btn delete delete-btn" title="Sil">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                     <polyline points="3 6 5 6 21 6"></polyline>
                                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </tr>
                                 `).join('')}
                                 <tr class="total-row">
-                                    <td>Total</td>
+                                    <td>Toplam</td>
                                     <td>${formatCurrency(totalExpected)}</td>
                                     <td>${formatCurrency(totalActual)}</td>
                                     <td></td>
@@ -514,7 +514,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/tracker/api/categories/');
             if (response.ok) {
                 const categories = await response.json();
-                categorySelect.innerHTML = '<option value="">Select category</option>';
+                categorySelect.innerHTML = '<option value="">Kategori seçin</option>';
                 categories.forEach(cat => {
                     const option = document.createElement('option');
                     option.value = cat.id;
@@ -530,7 +530,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function openModal(expense = null) {
         await loadCategories();
         editingId = expense ? expense.id : null;
-        modalTitle.textContent = expense ? 'Edit Expense' : 'Add Expense';
+        modalTitle.textContent = expense ? 'Gideri Düzenle' : 'Gider Ekle';
 
         const form = document.getElementById('expenseForm');
         if (expense) {
@@ -555,7 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function deleteExpense(id) {
-        if (!confirm('Are you sure you want to delete this expense?')) return;
+        if (!confirm('Bu gideri silmek istediğinizden emin misiniz?')) return;
 
         try {
             const response = await fetch(`/tracker/api/expenses/${id}/`, {
@@ -567,7 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 loadExpenses();
             } else {
-                alert('Failed to delete expense');
+                alert('Gider silinemedi');
             }
         } catch (error) {
             console.error('Failed to delete expense:', error);
@@ -612,7 +612,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadExpenses();
             } else {
                 const error = await response.json();
-                alert('Failed to save: ' + JSON.stringify(error));
+                alert('Kaydedilemedi: ' + JSON.stringify(error));
             }
         } catch (error) {
             console.error('Failed to save expense:', error);
@@ -651,7 +651,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/tracker/api/categories/');
             if (response.ok) {
                 const categories = await response.json();
-                filterCategory.innerHTML = '<option value="">All Categories</option>';
+                filterCategory.innerHTML = '<option value="">Tüm Kategoriler</option>';
                 categories.forEach(cat => {
                     const option = document.createElement('option');
                     option.value = cat.id;

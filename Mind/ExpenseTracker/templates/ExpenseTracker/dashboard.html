@@ -1,6 +1,6 @@
 {% extends 'index.html' %}
 
-{% block title %}Dashboard - Mind{% endblock %}
+{% block title %}Gösterge Paneli - Mind{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -106,7 +106,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Dashboard</h1>
+    <h1 class="page-title">Gösterge Paneli</h1>
     <div class="filters-bar" style="margin-bottom: 0;">
         <input type="month" id="monthFilter" class="input-neon" style="min-width: 180px;">
     </div>
@@ -122,7 +122,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Income</span>
+            <span class="summary-label">Toplam Gelir</span>
             <span class="summary-value text-success" id="totalIncome">₺0</span>
         </div>
     </div>
@@ -134,7 +134,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Expenses</span>
+            <span class="summary-label">Toplam Gider</span>
             <span class="summary-value" id="totalExpenses">₺0</span>
         </div>
     </div>
@@ -146,7 +146,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Debt</span>
+            <span class="summary-label">Toplam Borç</span>
             <span class="summary-value text-danger" id="totalDebt">₺0</span>
         </div>
     </div>
@@ -158,7 +158,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Total Credits</span>
+            <span class="summary-label">Toplam Kredi</span>
             <span class="summary-value" id="totalCredits" style="color: #3b82f6;">₺0</span>
         </div>
     </div>
@@ -171,7 +171,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Shopping</span>
+            <span class="summary-label">Alışveriş</span>
             <span class="summary-value" id="totalShopping" style="color: #f97316;">₺0</span>
         </div>
     </div>
@@ -184,7 +184,7 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Net Balance</span>
+            <span class="summary-label">Net Bakiye</span>
             <span class="summary-value" id="netTotal">₺0</span>
         </div>
     </div>
@@ -193,39 +193,39 @@
 <!-- Charts -->
 <div class="dashboard-grid">
     <div class="chart-card">
-        <div class="chart-card-title">Spending Breakdown</div>
+        <div class="chart-card-title">Harcama Dağılımı</div>
         <div class="chart-container" id="expensesChartContainer">
             <canvas id="expensesChart"></canvas>
         </div>
     </div>
     <div class="chart-card">
-        <div class="chart-card-title">Income vs Spending</div>
+        <div class="chart-card-title">Gelir / Harcama</div>
         <div class="chart-container" id="overviewChartContainer">
             <canvas id="overviewChart"></canvas>
         </div>
     </div>
     <div class="chart-card">
-        <div class="chart-card-title">Debts by Bank</div>
+        <div class="chart-card-title">Bankaya Göre Borçlar</div>
         <div class="chart-container" id="debtsChartContainer">
             <canvas id="debtsChart"></canvas>
         </div>
     </div>
     <div class="chart-card">
-        <div class="chart-card-title">Credits by Bank</div>
+        <div class="chart-card-title">Bankaya Göre Krediler</div>
         <div id="creditsByBankContainer">
             <table class="data-table" id="creditsByBankTable" style="width: 100%;">
                 <thead>
                     <tr>
-                        <th>Bank</th>
-                        <th>Installments</th>
-                        <th>Paid</th>
-                        <th>Remaining</th>
+                        <th>Banka</th>
+                        <th>Taksitler</th>
+                        <th>Ödenen</th>
+                        <th>Kalan</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td colspan="4">
-                            <div class="no-data-message" style="height: 200px;">No credit data</div>
+                            <div class="no-data-message" style="height: 200px;">Kredi verisi yok</div>
                         </td>
                     </tr>
                 </tbody>
@@ -233,7 +233,7 @@
         </div>
     </div>
     <div class="chart-card chart-card-full" style="grid-column: 1 / -1;">
-        <div class="chart-card-title">Monthly Trend (Last 6 Months)</div>
+        <div class="chart-card-title">Aylık Trend (Son 6 Ay)</div>
         <div class="chart-container" id="trendChartContainer">
             <canvas id="trendChart"></canvas>
         </div>
@@ -272,7 +272,7 @@ function showNoData(containerId, canvas) {
     if (!msg) {
         msg = document.createElement('div');
         msg.className = 'no-data-message';
-        msg.textContent = 'No data available';
+        msg.textContent = 'Veri bulunamadı';
         container.appendChild(msg);
     }
     msg.style.display = 'flex';
@@ -306,21 +306,21 @@ function renderExpensesChart(data, totalIncome, creditsTotal, shoppingTotal, deb
 
     // Debts Paid dilimi
     if (debtsPaid > 0) {
-        chartLabels.push('Debts Paid');
+        chartLabels.push('Ödenen Borçlar');
         chartValues.push(debtsPaid);
         chartColors.push('rgba(255, 71, 87, 0.7)');
     }
 
     // Credits dilimi
     if (creditsTotal > 0) {
-        chartLabels.push('Credits');
+        chartLabels.push('Krediler');
         chartValues.push(creditsTotal);
         chartColors.push('rgba(59, 130, 246, 0.7)');
     }
 
     // Shopping dilimi
     if (shoppingTotal > 0) {
-        chartLabels.push('Shopping');
+        chartLabels.push('Alışveriş');
         chartValues.push(shoppingTotal);
         chartColors.push('rgba(249, 115, 22, 0.7)');
     }
@@ -372,7 +372,7 @@ function renderExpensesChart(data, totalIncome, creditsTotal, shoppingTotal, deb
                 ctx.fillText(`${pct}%`, centerX, centerY - 8);
                 ctx.font = '12px Segoe UI, sans-serif';
                 ctx.fillStyle = '#a0a0a0';
-                ctx.fillText('of income', centerX, centerY + 14);
+                ctx.fillText('gelirin', centerX, centerY + 14);
                 ctx.restore();
             }
         }]
@@ -393,7 +393,7 @@ function renderOverviewChart(totalIncome, totalExpenses, totalDebtRemaining, tot
     overviewChart = new Chart(canvas, {
         type: 'bar',
         data: {
-            labels: ['Income', 'Expenses', 'Debts', 'Credits', 'Shopping'],
+            labels: ['Gelir', 'Giderler', 'Borçlar', 'Krediler', 'Alışveriş'],
             datasets: [{
                 data: [totalIncome, totalExpenses, totalDebtRemaining, totalCredits, totalShopping],
                 backgroundColor: [
@@ -426,7 +426,7 @@ function renderOverviewChart(totalIncome, totalExpenses, totalDebtRemaining, tot
                         label: (ctx) => {
                             const val = ctx.parsed.x;
                             const pct = totalIncome > 0 ? ((val / totalIncome) * 100).toFixed(1) : 0;
-                            return ` ${fmt(val)} (${pct}% of income)`;
+                            return ` ${fmt(val)} (gelirin %${pct}'i)`;
                         }
                     }
                 }
@@ -455,14 +455,14 @@ function renderDebtsChart(data) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Paid',
+                    label: 'Ödenen',
                     data: paidValues,
                     backgroundColor: 'rgba(34, 197, 94, 0.7)',
                     borderColor: '#22c55e',
                     borderWidth: 1
                 },
                 {
-                    label: 'Remaining',
+                    label: 'Kalan',
                     data: remainingValues,
                     backgroundColor: 'rgba(255, 71, 87, 0.7)',
                     borderColor: '#ff4757',
@@ -494,7 +494,7 @@ function renderDebtsChart(data) {
                             const total = data[bank].total || 0;
                             const paid = data[bank].paid || 0;
                             const pct = total > 0 ? ((paid / total) * 100).toFixed(1) : 0;
-                            return `Total: ${fmt(total)} — ${pct}% paid`;
+                            return `Toplam: ${fmt(total)} — %${pct} ödendi`;
                         },
                         label: (ctx) => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.x)}`
                     }
@@ -560,7 +560,7 @@ function renderTrendChart(data) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Income',
+                    label: 'Gelir',
                     data: income,
                     borderColor: '#22c55e',
                     backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -569,7 +569,7 @@ function renderTrendChart(data) {
                     pointBackgroundColor: '#22c55e'
                 },
                 {
-                    label: 'Expenses',
+                    label: 'Giderler',
                     data: expenses,
                     borderColor: '#FFC107',
                     backgroundColor: 'rgba(255, 193, 7, 0.1)',
@@ -578,7 +578,7 @@ function renderTrendChart(data) {
                     pointBackgroundColor: '#FFC107'
                 },
                 {
-                    label: 'Debts',
+                    label: 'Borçlar',
                     data: debts,
                     borderColor: '#ff4757',
                     backgroundColor: 'rgba(255, 71, 87, 0.1)',
@@ -587,7 +587,7 @@ function renderTrendChart(data) {
                     pointBackgroundColor: '#ff4757'
                 },
                 {
-                    label: 'Credits',
+                    label: 'Krediler',
                     data: credits,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -596,7 +596,7 @@ function renderTrendChart(data) {
                     pointBackgroundColor: '#3b82f6'
                 },
                 {
-                    label: 'Shopping',
+                    label: 'Alışveriş',
                     data: shopping,
                     borderColor: '#f97316',
                     backgroundColor: 'rgba(249, 115, 22, 0.1)',
@@ -630,7 +630,7 @@ function renderTrendChart(data) {
 function renderCreditsByBank(data) {
     const tbody = document.querySelector('#creditsByBankTable tbody');
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4"><div class="no-data-message" style="height: 200px;">No credit data</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4"><div class="no-data-message" style="height: 200px;">Kredi verisi yok</div></td></tr>`;
         return;
     }
 
