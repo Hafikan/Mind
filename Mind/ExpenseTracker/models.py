@@ -56,9 +56,6 @@ class Debts(models.Model):
     def is_closed(self):
         return (self.amount_paid or 0) >= self.total_debt
 
-    class Meta:
-        unique_together = ("user", "total_debt", "bank")
-
 class Credits(models.Model):
     user = models.ForeignKey(AppUser, related_name="credits", on_delete=models.CASCADE)
     bank = models.ForeignKey(Banks, related_name="bank_debts", on_delete=models.RESTRICT)
