@@ -14,6 +14,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from rest_framework.decorators import action
 from datetime import date
 
@@ -25,6 +26,7 @@ class ExpenseCategoryModelViewSet(ModelViewSet):
         return ExpenseCategory.objects.filter(user=self.request.user)
 
 
+@login_required
 def categories_view(request):
     return render(request, "ExpenseTracker/categories.html")
 
@@ -52,6 +54,7 @@ class ExpenseModelViewSet(ModelViewSet):
         return queryset.select_related('category')
 
 
+@login_required
 def expenses_view(request):
     return render(request, "ExpenseTracker/expenses.html")
 
@@ -62,6 +65,7 @@ class BanksModelViewSet(ModelViewSet):
     def get_queryset(self):
         return Banks.objects.filter(user=self.request.user)
 
+@login_required
 def banks_view(request):
     return render(request,"ExpenseTracker/banks.html")
 
@@ -89,6 +93,7 @@ class DebtsModelViewSet(ModelViewSet):
             )
         ).order_by('_is_closed', '-total_debt')
 
+@login_required
 def debts_view(request):
     return render(request, "ExpenseTracker/debts.html")
         
@@ -152,6 +157,7 @@ class CreditsViewSet(ModelViewSet):
             'count': queryset.count()
         })
         
+@login_required
 def credits_view(request):
     return render(request, 'ExpenseTracker/credits.html')
 
@@ -181,6 +187,7 @@ class IncomeModelViewSet(ModelViewSet):
         ])
 
 
+@login_required
 def income_view(request):
     return render(request, 'ExpenseTracker/income.html')
 
@@ -199,10 +206,12 @@ class ShoppingModelViewSet(ModelViewSet):
         return queryset.order_by('-date')
 
 
+@login_required
 def shopping_view(request):
     return render(request, 'ExpenseTracker/shopping.html')
 
 
+@login_required
 def dashboard_view(request):
     return render(request, 'ExpenseTracker/dashboard.html')
 
