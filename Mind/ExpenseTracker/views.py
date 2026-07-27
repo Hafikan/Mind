@@ -5,6 +5,7 @@ from .serializers import DebtsSerializer
 from .serializers import CreditsSerializer
 from .serializers import IncomeSerializer
 from .serializers import ShoppingSerializer
+from .serializers import build_carry_map
 
 from django.db import models as db_models
 from django.db.models import Sum, F, Case, When, BooleanField, DecimalField, Value
@@ -16,6 +17,7 @@ from rest_framework.response import Response
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from rest_framework.decorators import action
+import calendar
 from datetime import date
 
 
@@ -65,12 +67,68 @@ class BanksModelViewSet(ModelViewSet):
     def get_queryset(self):
         return Banks.objects.filter(user=self.request.user)
 
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Her kart icin guncel borc / limit / kullanilabilir limit ozeti.
+
+        `current_debt`, kartin en son ekstresinin kalan bakiyesidir; devir
+        zincirinin bugunku ucu budur.
+        """
+        cards = list(self.get_queryset().order_by('name'))
+        latest = _latest_statement_per_bank(request.user, [c.id for c in cards])
+        today = date.today()
+
+        data = []
+        for card in cards:
+            statement = latest.get(card.id)
+            current_debt = (
+                float(statement.total_debt) - float(statement.amount_paid or 0)
+                if statement else 0.0
+            )
+            limit = float(card.card_limit) if card.card_limit is not None else None
+            data.append({
+                'id': card.id,
+                'name': card.name,
+                'logo': request.build_absolute_uri(card.logo.url) if card.logo else None,
+                'card_limit': limit,
+                'statement_day': card.statement_day,
+                'current_debt': current_debt,
+                'available_limit': None if limit is None else limit - current_debt,
+                'utilization': (
+                    None if not limit else round(current_debt / limit * 100, 1)
+                ),
+                'last_cutoff_date': statement.cutoff_date if statement else None,
+                'has_current_period': bool(
+                    statement
+                    and statement.cutoff_date
+                    and statement.cutoff_date.year == today.year
+                    and statement.cutoff_date.month == today.month
+                ),
+            })
+        return Response(data)
+
+
+def _latest_statement_per_bank(user, bank_ids):
+    """{bank_id: en guncel Debts satiri} - kart basina son ekstre."""
+    if not bank_ids:
+        return {}
+    latest = {}
+    statements = Debts.objects.filter(
+        user=user, bank_id__in=bank_ids
+    ).order_by('bank_id', 'cutoff_date', 'id')
+    for statement in statements:
+        latest[statement.bank_id] = statement  # siralama artan, sonuncu kazanir
+    return latest
+
+
 @login_required
 def banks_view(request):
     return render(request,"ExpenseTracker/banks.html")
 
 
 class DebtsModelViewSet(ModelViewSet):
+    """Kredi karti ekstreleri. Bir satir = bir kartin bir donemlik ekstresi."""
+
     serializer_class = DebtsSerializer
 
     def get_queryset(self):
@@ -85,13 +143,81 @@ class DebtsModelViewSet(ModelViewSet):
         if month and year:
             queryset = queryset.filter(cutoff_date__month=month, cutoff_date__year=year)
 
-        return queryset.select_related('bank').annotate(
-            _is_closed=db_models.Case(
-                db_models.When(amount_paid__gte=db_models.F('total_debt'), then=True),
-                default=False,
-                output_field=db_models.BooleanField()
+        # Ekstre gecmisi kronolojik okunur: en yeni donem ustte.
+        return queryset.select_related('bank').order_by('-cutoff_date', '-id')
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        carry_map = getattr(self, '_carry_map', None)
+        if carry_map is not None:
+            context['carry_map'] = carry_map
+        return context
+
+    def list(self, request, *args, **kwargs):
+        statements = list(self.filter_queryset(self.get_queryset()))
+
+        # Devir zincirini tek sorguda kur; satir basina sorgu acilmaz.
+        self._carry_map = build_carry_map(
+            request.user, list({s.bank_id for s in statements})
+        )
+        data = self.get_serializer(statements, many=True).data
+
+        if request.query_params.get('with_virtual'):
+            data = self._virtual_rows(request) + data
+        return Response(data)
+
+    def _virtual_rows(self, request):
+        """Bu donemde henuz ekstresi girilmemis kartlar icin sanal satirlar.
+
+        Kaydedilene kadar veritabaninda karsiligi yoktur; sadece devreden
+        bakiyeyi gorunur kilar ve ekstre girme akisini baslatir.
+        """
+        cards = Banks.objects.filter(user=request.user)
+        bank_id = request.query_params.get('bank_id')
+        if bank_id:
+            cards = cards.filter(id=bank_id)
+        cards = list(cards.order_by('name'))
+
+        latest = _latest_statement_per_bank(request.user, [c.id for c in cards])
+        today = date.today()
+        days_in_month = calendar.monthrange(today.year, today.month)[1]
+
+        rows = []
+        for card in cards:
+            last = latest.get(card.id)
+            if (
+                last and last.cutoff_date
+                and (last.cutoff_date.year, last.cutoff_date.month) == (today.year, today.month)
+            ):
+                continue  # bu donemin ekstresi zaten girilmis
+
+            carry = (
+                float(last.total_debt) - float(last.amount_paid or 0)
+                if last else 0.0
             )
-        ).order_by('_is_closed', '-total_debt')
+            day = card.statement_day or (last.cutoff_date.day if last and last.cutoff_date else today.day)
+            rows.append({
+                'id': None,
+                'virtual': True,
+                'bank': card.id,
+                'bank_name': card.name,
+                'cutoff_date': None,
+                'total_debt': None,
+                'amount_paid': None,
+                'min_payment_coeff': None,
+                'min_payment': None,
+                'is_closed': False,
+                'carry_over': carry,
+                'new_spending': None,
+                'remaining': carry,
+                'suggested_cutoff_date': date(
+                    today.year, today.month, min(day, days_in_month)
+                ).isoformat(),
+                'suggested_min_payment_coeff': (
+                    str(last.min_payment_coeff) if last else None
+                ),
+            })
+        return rows
 
 @login_required
 def debts_view(request):
@@ -222,6 +348,28 @@ class DashboardSummaryView(APIView):
         month = request.query_params.get('month')
         year = request.query_params.get('year')
 
+        # --- Kart ekstreleri: devir zinciri ---
+        # Ekstre toplami (total_debt) devreden bakiyeyi de icerir, dolayisiyla
+        # aylik toplami almak ayni borcu her ay yeniden sayar. Harcama trendi
+        # icin dogru olcu `new_spending = ekstre toplami - devir`.
+        statements = list(Debts.objects.filter(user=user).select_related('bank'))
+        carry_map = build_carry_map(user, list({s.bank_id for s in statements}))
+
+        def new_spending_of(statement):
+            return float(statement.total_debt) - carry_map.get(statement.id, 0)
+
+        def statements_in(target_month, target_year):
+            return [
+                s for s in statements
+                if s.cutoff_date
+                and s.cutoff_date.month == int(target_month)
+                and s.cutoff_date.year == int(target_year)
+            ]
+
+        selected_statements = (
+            statements_in(month, year) if month and year else statements
+        )
+
         # --- Expenses by Category ---
         expenses_qs = Expense.objects.filter(user=user)
         if month and year:
@@ -271,6 +419,8 @@ class DashboardSummaryView(APIView):
             'remaining': total_debt - total_paid,
             'open_count': open_count,
             'closed_count': closed_count,
+            # Bu donemde karta gercekten girilen tutar (devir haric).
+            'new_spending': sum(new_spending_of(s) for s in selected_statements),
         }
 
         # --- Debts by Bank (total_debt, amount_paid per bank) ---
@@ -282,6 +432,12 @@ class DashboardSummaryView(APIView):
                 paid=Coalesce(Sum('amount_paid'), Value(0, output_field=DecimalField())),
             )
         )
+        new_spending_by_bank = {}
+        for statement in selected_statements:
+            new_spending_by_bank[statement.bank.name] = (
+                new_spending_by_bank.get(statement.bank.name, 0) + new_spending_of(statement)
+            )
+
         debts_by_bank = {}
         for row in debts_by_bank_data:
             bank_name = row['bank__name']
@@ -291,6 +447,7 @@ class DashboardSummaryView(APIView):
                 'total': total,
                 'paid': paid,
                 'remaining': total - paid,
+                'new_spending': new_spending_by_bank.get(bank_name, 0),
             }
 
         # --- Credits Summary ---
@@ -390,9 +547,9 @@ class DashboardSummaryView(APIView):
                 user=user, pay_day__month=m, pay_day__year=y_val
             ).aggregate(t=Sum('actual_amount'))['t'] or 0
 
-            debt_total = Debts.objects.filter(
-                user=user, cutoff_date__month=m, cutoff_date__year=y_val
-            ).aggregate(t=Sum('total_debt'))['t'] or 0
+            month_statements = statements_in(m, y_val)
+            debt_total = sum(float(s.total_debt) for s in month_statements)
+            debt_new_spending = sum(new_spending_of(s) for s in month_statements)
 
             credit_total = Credits.objects.filter(
                 user=user, cutoff_date__month=m, cutoff_date__year=y_val
@@ -409,7 +566,10 @@ class DashboardSummaryView(APIView):
             monthly_trend.append({
                 'label': d.strftime('%b %Y'),
                 'expenses': float(exp_total),
+                # `debts` ekstre toplamidir (devir dahil), geriye donuk uyumluluk
+                # icin duruyor; trend cizgisi `debt_new_spending` kullanmali.
                 'debts': float(debt_total),
+                'debt_new_spending': float(debt_new_spending),
                 'credits': float(credit_total),
                 'income': float(income_total),
                 'shopping': float(shopping_total),

@@ -1,139 +1,81 @@
 {% extends 'index.html' %}
 
-{% block title %}Borçlar - Mind{% endblock %}
+{% block title %}Kredi Kartları - Mind{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Borçlar</h1>
-    <button class="btn btn-primary" id="addDebtBtn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        <span>Borç Ekle</span>
-    </button>
-</div>
-
-<!-- Summary Cards -->
-<div class="summary-cards">
-    <div class="summary-card">
-        <div class="summary-icon debt-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2v20"></path>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+    <h1 class="page-title">Kredi Kartları</h1>
+    <div class="header-actions">
+        <a href="{% url 'expense_tracker:banks' %}" class="btn btn-outline">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
             </svg>
-        </div>
-        <div class="summary-content">
-            <span class="summary-label">Toplam Borç</span>
-            <span class="summary-value text-danger" id="summaryTotalDebt">₺0,00</span>
-        </div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-icon paid-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            <span>Kart Ekle</span>
+        </a>
+        <button class="btn btn-primary" id="addStatementBtn" type="button" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-        </div>
-        <div class="summary-content">
-            <span class="summary-label">Toplam Ödenen</span>
-            <span class="summary-value text-success" id="summaryTotalPaid">₺0,00</span>
-        </div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-icon remaining-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-        </div>
-        <div class="summary-content">
-            <span class="summary-label">Kalan</span>
-            <span class="summary-value" id="summaryRemaining">₺0,00</span>
-        </div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.05)); color: #a855f7;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 1l4 4-4 4"></path>
-                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                <path d="M7 23l-4-4 4-4"></path>
-                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-            </svg>
-        </div>
-        <div class="summary-content">
-            <span class="summary-label">Devir</span>
-            <span class="summary-value" id="summaryCarryOver" style="color: #a855f7;">₺0,00</span>
-        </div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05)); color: #f97316;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="9" cy="21" r="1"></circle>
-                <circle cx="20" cy="21" r="1"></circle>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-            </svg>
-        </div>
-        <div class="summary-content">
-            <span class="summary-label">Yeni Harcama</span>
-            <span class="summary-value" id="summaryNewSpending" style="color: #f97316;">₺0,00</span>
-        </div>
+            <span id="addStatementLabel">Ekstre Gir</span>
+        </button>
     </div>
 </div>
 
-<!-- Filters -->
+<!-- Kart kutulari -->
 <div class="filters-bar">
     <div class="search-box">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="searchInput" class="input-neon" placeholder="Borçlarda ara...">
+        <input type="text" id="cardSearch" class="input-neon" placeholder="Kart ara...">
     </div>
-    <input type="month" id="filterMonth" class="input-neon">
 </div>
 
-<!-- Debts Table -->
-<div class="card">
+<div class="cards-grid" id="cardsGrid"></div>
+
+<div class="empty-state" id="noCardsState" style="display: none;">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+        <rect x="1" y="4" width="22" height="16" rx="2"></rect>
+        <line x1="1" y1="10" x2="23" y2="10"></line>
+    </svg>
+    <p>Kayıtlı kart yok</p>
+    <span class="text-muted">Ekstre takibine başlamak için önce bir banka/kart ekleyin</span>
+</div>
+
+<!-- Secili kartin ekstre gecmisi -->
+<div class="card" id="statementsCard" style="display: none;">
+    <div class="statements-header">
+        <h2 class="statements-title" id="statementsTitle">Ekstre Geçmişi</h2>
+        <span class="text-muted" id="statementsHint"></span>
+    </div>
     <div class="table-container">
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Durum</th>
-                    <th>Banka</th>
-                    <th>Toplam Borç</th>
+                    <th>Dönem</th>
                     <th>Devir</th>
                     <th>Yeni Harcama</th>
-                    <th>Asgari Ödeme</th>
-                    <th>Ödenen Tutar</th>
-                    <th>Kesim Tarihi</th>
+                    <th>Ekstre Toplamı</th>
+                    <th>Asgari</th>
+                    <th>Ödenen</th>
+                    <th>Kalan</th>
                     <th>İşlemler</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr class="empty-row">
-                    <td colspan="9">
-                        <div class="empty-state">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                                <path d="M12 2v20"></path>
-                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                            </svg>
-                            <p>Kayıtlı borç yok</p>
-                            <span class="text-muted">Ödeme takibine başlamak için bir borç ekleyin</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
+            <tbody id="statementsBody"></tbody>
         </table>
     </div>
 </div>
 
-<!-- Add/Edit Debt Modal -->
-<div class="modal-overlay" id="debtModalOverlay">
-    <div class="modal" id="debtModal">
+<!-- Ekstre modal -->
+<div class="modal-overlay" id="statementModalOverlay">
+    <div class="modal" id="statementModal">
         <div class="modal-header">
-            <h2 class="modal-title">Borç Ekle</h2>
-            <button class="modal-close" id="closeDebtModal">
+            <h2 class="modal-title" id="statementModalTitle">Ekstre Gir</h2>
+            <button class="modal-close" id="closeStatementModal">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -141,379 +83,657 @@
             </button>
         </div>
         <div class="modal-body">
-            <form id="debtForm">
-                <div class="form-group">
-                    <label class="form-label">Banka</label>
-                    <select name="bank" class="input-neon select-neon" required>
-                        <option value="">Banka seçin</option>
-                    </select>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Toplam Borç</label>
-                        <input type="number" step="0.01" name="total_debt" class="input-neon" placeholder="0.00" required>
+            <form id="statementForm">
+                <div class="statement-context">
+                    <div class="ctx-row">
+                        <span class="ctx-label">Kart</span>
+                        <span class="ctx-value" id="ctxCardName">-</span>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Asgari Ödeme Katsayısı</label>
-                        <input type="number" step="0.01" max="1" name="min_payment_coeff" class="input-neon" placeholder="0.03" required>
+                    <div class="ctx-row">
+                        <span class="ctx-label">Devir (önceki dönemden kalan)</span>
+                        <span class="ctx-value ctx-carry" id="ctxCarryOver">₺0,00</span>
                     </div>
                 </div>
+
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Ödenen Tutar</label>
-                        <input type="number" step="0.01" name="amount_paid" class="input-neon" placeholder="0.00">
+                        <label class="form-label">Ekstre Toplamı</label>
+                        <input type="number" step="0.01" min="0" name="total_debt" id="inputTotalDebt"
+                               class="input-neon" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Kesim Tarihi</label>
-                        <input type="date" name="cutoff_date" class="input-neon">
+                        <input type="date" name="cutoff_date" id="inputCutoffDate" class="input-neon" required>
                     </div>
                 </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Ödenen Tutar</label>
+                        <input type="number" step="0.01" min="0" name="amount_paid" id="inputAmountPaid"
+                               class="input-neon" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Asgari Ödeme Katsayısı</label>
+                        <input type="number" step="0.01" min="0" max="1" name="min_payment_coeff"
+                               id="inputMinCoeff" class="input-neon" placeholder="0.20" required>
+                    </div>
+                </div>
+
+                <div class="statement-preview">
+                    <div class="preview-item">
+                        <span class="preview-label">Yeni Harcama</span>
+                        <span class="preview-value preview-new" id="previewNewSpending">₺0,00</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Asgari Ödeme</span>
+                        <span class="preview-value" id="previewMinPayment">₺0,00</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Kalan</span>
+                        <span class="preview-value preview-remaining" id="previewRemaining">₺0,00</span>
+                    </div>
+                </div>
+                <p class="preview-warning" id="previewWarning" style="display: none;"></p>
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-outline" id="cancelDebtBtn">İptal</button>
-            <button class="btn btn-primary" type="submit" form="debtForm">Borcu Kaydet</button>
+            <button class="btn btn-outline" id="cancelStatementBtn">İptal</button>
+            <button class="btn btn-primary" type="submit" form="statementForm">Ekstreyi Kaydet</button>
         </div>
     </div>
 </div>
 
 <style>
-.debt-row-closed {
-    opacity: 0.5;
-}
-
-.debt-row-closed td {
-    text-decoration: line-through;
-    text-decoration-color: var(--text-muted);
-}
-
-.debt-row-closed td:first-child,
-.debt-row-closed td:last-child {
-    text-decoration: none;
-}
-
-.status-badge {
-    display: inline-flex;
+.header-actions {
+    display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 11px;
+    gap: 10px;
+}
+
+.header-actions .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.credit-card-box {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.credit-card-box:hover {
+    border-color: var(--border-glow);
+    box-shadow: var(--neon-glow);
+}
+
+.credit-card-box.active {
+    border-color: var(--accent-primary);
+    box-shadow: var(--neon-glow);
+}
+
+.cc-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.cc-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.cc-name {
+    font-size: 14px;
     font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cc-debt {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--danger);
+    line-height: 1.2;
+}
+
+.cc-debt-label {
+    font-size: 11px;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.status-open {
-    background: rgba(255, 71, 87, 0.15);
-    color: var(--danger);
-    border: 1px solid rgba(255, 71, 87, 0.3);
+.cc-limit-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 12px;
 }
 
-.status-closed {
-    background: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
-    border: 1px solid rgba(34, 197, 94, 0.3);
+.cc-bar {
+    height: 5px;
+    background: var(--bg-elevated);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+.cc-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width var(--transition-speed) ease;
+}
+
+.cc-pending {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(249, 115, 22, 0.15);
+    color: #f97316;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.statements-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 0;
+}
+
+.statements-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.statement-row-virtual td {
+    background: rgba(255, 193, 7, 0.04);
+}
+
+.statement-row-virtual .period-cell {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.period-cell {
+    white-space: nowrap;
+}
+
+.muted-cell {
+    color: var(--text-muted);
+}
+
+.carry-cell {
+    color: #a855f7;
+    font-weight: 600;
+}
+
+.new-cell {
+    color: #f97316;
+    font-weight: 600;
+}
+
+.remaining-cell {
+    font-weight: 600;
+}
+
+.statement-context {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+}
+
+.ctx-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.ctx-row + .ctx-row {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+}
+
+.ctx-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.ctx-value {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ctx-carry {
+    color: #a855f7;
+}
+
+.statement-preview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.preview-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.preview-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.preview-value {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.preview-new {
+    color: #f97316;
+}
+
+.preview-remaining {
+    color: var(--danger);
+}
+
+.preview-warning {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--danger);
 }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const addBtn = document.getElementById('addDebtBtn');
-    const modal = document.getElementById('debtModal');
-    const overlay = document.getElementById('debtModalOverlay');
-    const closeBtn = document.getElementById('closeDebtModal');
-    const cancelBtn = document.getElementById('cancelDebtBtn');
-    const bankSelect = modal.querySelector('select[name="bank"]');
-    const tableBody = document.querySelector('.data-table tbody');
-    const modalTitle = modal.querySelector('.modal-title');
-    const debtForm = document.getElementById('debtForm');
-    const searchInput = document.getElementById('searchInput');
-    const filterMonth = document.getElementById('filterMonth');
+document.addEventListener('DOMContentLoaded', function () {
+    const CARDS_URL = '/tracker/api/banks/summary/';
+    const STATEMENTS_URL = '/tracker/api/debts/';
 
-    let editingId = null;
-    let allDebts = [];
+    const cardsGrid = document.getElementById('cardsGrid');
+    const noCardsState = document.getElementById('noCardsState');
+    const cardSearch = document.getElementById('cardSearch');
+    const statementsCard = document.getElementById('statementsCard');
+    const statementsBody = document.getElementById('statementsBody');
+    const statementsTitle = document.getElementById('statementsTitle');
+    const statementsHint = document.getElementById('statementsHint');
+    const addStatementBtn = document.getElementById('addStatementBtn');
+    const addStatementLabel = document.getElementById('addStatementLabel');
 
-    // Default to current month
-    const now = new Date();
-    const yy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    filterMonth.value = `${yy}-${mm}`;
+    const overlay = document.getElementById('statementModalOverlay');
+    const modal = document.getElementById('statementModal');
+    const modalTitle = document.getElementById('statementModalTitle');
+    const form = document.getElementById('statementForm');
+    const inputTotalDebt = document.getElementById('inputTotalDebt');
+    const inputAmountPaid = document.getElementById('inputAmountPaid');
+    const inputMinCoeff = document.getElementById('inputMinCoeff');
+    const inputCutoffDate = document.getElementById('inputCutoffDate');
 
-    function formatCurrency(value) {
-        return `₺${parseFloat(value || 0).toFixed(2).replace('.', ',')}`;
+    const state = { cards: [], selectedCardId: null, statements: [], editing: null, carryOver: 0 };
+
+    const TRY_FMT = new Intl.NumberFormat('tr-TR', {
+        style: 'currency', currency: 'TRY', minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+    const PERIOD_FMT = new Intl.DateTimeFormat('tr-TR', { month: 'short', year: 'numeric' });
+
+    function fmt(value) {
+        return TRY_FMT.format(Number(value || 0));
     }
 
-    const emptyRowHTML = `
-        <tr class="empty-row">
-            <td colspan="9">
-                <div class="empty-state">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                        <path d="M12 2v20"></path>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                    </svg>
-                    <p>Kayıtlı borç yok</p>
-                    <span class="text-muted">Ödeme takibine başlamak için bir borç ekleyin</span>
-                </div>
-            </td>
-        </tr>
-    `;
+    function escapeHtml(value) {
+        return String(value === null || value === undefined ? '' : value).replace(
+            /[&<>"']/g,
+            c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+        );
+    }
+
+    function periodLabel(isoDate) {
+        if (!isoDate) return '-';
+        const [y, m, d] = isoDate.split('-').map(Number);
+        return PERIOD_FMT.format(new Date(y, m - 1, d));
+    }
 
     function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
+        const cookies = (document.cookie || '').split(';');
+        for (const raw of cookies) {
+            const cookie = raw.trim();
+            if (cookie.startsWith(name + '=')) {
+                return decodeURIComponent(cookie.slice(name.length + 1));
             }
         }
-        return cookieValue;
+        return null;
     }
 
-    function buildQueryParams() {
-        const params = new URLSearchParams();
-        const monthValue = filterMonth.value;
-        if (monthValue) {
-            const [year, month] = monthValue.split('-');
-            params.append('year', year);
-            params.append('month', month);
-        }
-        return params.toString();
-    }
-
-    async function loadDebts() {
-        try {
-            const query = buildQueryParams();
-            const url = '/tracker/api/debts/' + (query ? '?' + query : '');
-            const response = await fetch(url);
-            if (response.ok) {
-                allDebts = await response.json();
-                applySearch();
+    async function api(url, options) {
+        const opts = Object.assign({ headers: {} }, options || {});
+        opts.headers = Object.assign(
+            { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            opts.headers
+        );
+        const response = await fetch(url, opts);
+        if (!response.ok) {
+            let detail = '';
+            try {
+                detail = Object.entries(await response.json())
+                    .map(([field, msgs]) => `${field}: ${[].concat(msgs).join(' ')}`)
+                    .join('\n');
+            } catch (err) {
+                detail = 'Sunucu hatası (' + response.status + ')';
             }
-        } catch (error) {
-            console.error('Borçlar yüklenemedi:', error);
+            throw new Error(detail);
         }
+        return response.status === 204 ? null : response.json();
     }
 
-    function applySearch() {
-        const searchTerm = searchInput.value.toLowerCase();
-        let filtered = allDebts;
-        if (searchTerm) {
-            filtered = filtered.filter(d =>
-                (d.bank_name && d.bank_name.toLowerCase().includes(searchTerm))
-            );
-        }
-        renderDebts(filtered);
-        updateSummary(filtered);
-    }
+    // ----- KART KUTULARI -----
 
-    function updateSummary(debts) {
-        let totalDebt = 0;
-        let totalPaid = 0;
-        let totalCarryOver = 0;
-        let totalNewSpending = 0;
-        debts.forEach(d => {
-            totalDebt += parseFloat(d.total_debt || 0);
-            totalPaid += parseFloat(d.amount_paid || 0);
-            totalCarryOver += parseFloat(d.carry_over || 0);
-            totalNewSpending += parseFloat(d.new_spending || 0);
-        });
-        document.getElementById('summaryTotalDebt').textContent = formatCurrency(totalDebt);
-        document.getElementById('summaryTotalPaid').textContent = formatCurrency(totalPaid);
-        document.getElementById('summaryRemaining').textContent = formatCurrency(totalDebt - totalPaid);
-        document.getElementById('summaryCarryOver').textContent = formatCurrency(totalCarryOver);
-        document.getElementById('summaryNewSpending').textContent = formatCurrency(totalNewSpending);
-    }
+    function renderCards() {
+        const term = cardSearch.value.trim().toLowerCase();
+        const visible = term
+            ? state.cards.filter(c => (c.name || '').toLowerCase().includes(term))
+            : state.cards;
 
-    function renderDebts(debts) {
-        if (debts.length === 0) {
-            tableBody.innerHTML = emptyRowHTML;
-            return;
-        }
+        cardsGrid.innerHTML = '';
+        noCardsState.style.display = state.cards.length === 0 ? 'flex' : 'none';
 
-        tableBody.innerHTML = debts.map(debt => {
-            const minPayment = (parseFloat(debt.total_debt) * parseFloat(debt.min_payment_coeff)).toFixed(2);
-            const isClosed = debt.is_closed;
-            const rowClass = isClosed ? 'debt-row-closed' : '';
-            const statusBadge = isClosed
-                ? '<span class="status-badge status-closed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>Kapalı</span>'
-                : '<span class="status-badge status-open"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle></svg>Açık</span>';
+        visible.forEach(card => {
+            const box = document.createElement('div');
+            box.className = 'credit-card-box' + (card.id === state.selectedCardId ? ' active' : '');
+            box.dataset.cardId = card.id;
 
-            const carryOver = parseFloat(debt.carry_over || 0);
-            const newSpending = parseFloat(debt.new_spending || 0);
+            const logo = card.logo
+                ? `<img class="cc-logo" src="${escapeHtml(card.logo)}" alt="">`
+                : '';
 
-            return `
-            <tr data-id="${debt.id}" class="${rowClass}">
-                <td>${statusBadge}</td>
-                <td>${debt.bank_name || '-'}</td>
-                <td>${formatCurrency(debt.total_debt)}</td>
-                <td style="color: #a855f7; font-weight: 600;">${carryOver > 0 ? formatCurrency(carryOver) : '-'}</td>
-                <td style="color: #f97316; font-weight: 600;">${formatCurrency(newSpending)}</td>
-                <td>${formatCurrency(minPayment)}</td>
-                <td>${formatCurrency(debt.amount_paid)}</td>
-                <td>${debt.cutoff_date || '-'}</td>
-                <td>
-                    <div class="action-btns">
-                        <button class="action-btn edit-btn" title="Düzenle">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                        </button>
-                        <button class="action-btn delete delete-btn" title="Sil">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                        </button>
+            let limitBlock = '<div class="cc-limit-row"><span>Limit tanımsız</span></div>';
+            if (card.card_limit !== null) {
+                const pct = Math.min(100, Math.max(0, card.utilization || 0));
+                const color = pct >= 90 ? 'var(--danger)' : (pct >= 70 ? '#f97316' : 'var(--accent-primary)');
+                limitBlock = `
+                    <div class="cc-limit-row">
+                        <span>Kullanılabilir ${escapeHtml(fmt(card.available_limit))}</span>
+                        <span>%${escapeHtml(String(card.utilization))}</span>
                     </div>
-                </td>
-            </tr>
+                    <div class="cc-bar"><div class="cc-bar-fill" style="width: ${pct}%; background: ${color};"></div></div>
+                `;
+            }
+
+            const pending = card.has_current_period
+                ? ''
+                : '<span class="cc-pending">Bu dönem girilmedi</span>';
+
+            box.innerHTML = `
+                <div class="cc-head">${logo}<span class="cc-name">${escapeHtml(card.name)}</span></div>
+                <div class="cc-debt-label">Güncel borç</div>
+                <div class="cc-debt">${escapeHtml(fmt(card.current_debt))}</div>
+                ${limitBlock}
+                ${pending}
             `;
+            box.addEventListener('click', () => selectCard(card.id));
+            cardsGrid.appendChild(box);
+        });
+    }
+
+    async function loadCards() {
+        try {
+            state.cards = await api(CARDS_URL);
+            if (state.cards.length && !state.cards.some(c => c.id === state.selectedCardId)) {
+                state.selectedCardId = state.cards[0].id;
+            }
+            renderCards();
+            if (state.selectedCardId) {
+                await loadStatements();
+            } else {
+                statementsCard.style.display = 'none';
+            }
+        } catch (err) {
+            console.error('Kartlar yüklenemedi:', err);
+        }
+    }
+
+    async function selectCard(cardId) {
+        state.selectedCardId = cardId;
+        renderCards();
+        await loadStatements();
+    }
+
+    // ----- EKSTRE GECMISI -----
+
+    function selectedCard() {
+        return state.cards.find(c => c.id === state.selectedCardId) || null;
+    }
+
+    async function loadStatements() {
+        const card = selectedCard();
+        if (!card) return;
+        try {
+            state.statements = await api(
+                `${STATEMENTS_URL}?bank_id=${card.id}&with_virtual=1`
+            );
+            renderStatements();
+        } catch (err) {
+            console.error('Ekstreler yüklenemedi:', err);
+        }
+    }
+
+    function renderStatements() {
+        const card = selectedCard();
+        statementsCard.style.display = 'block';
+        statementsTitle.textContent = card.name + ' — Ekstre Geçmişi';
+
+        const real = state.statements.filter(s => !s.virtual);
+        statementsHint.textContent = real.length
+            ? real.length + ' dönem kayıtlı'
+            : 'Henüz ekstre girilmemiş';
+
+        // Basliktaki "Ekstre Gir", secili kartin bu donemine baglidir.
+        const pending = state.statements.find(s => s.virtual);
+        addStatementBtn.disabled = !pending;
+        addStatementLabel.textContent = pending
+            ? card.name + ' — Ekstre Gir'
+            : 'Bu dönem girildi';
+        addStatementBtn.title = pending
+            ? 'Bu dönemin ekstresini gir'
+            : card.name + ' için bu dönemin ekstresi zaten girilmiş';
+
+        statementsBody.innerHTML = state.statements.map(s => {
+            if (s.virtual) {
+                return `
+                <tr class="statement-row-virtual">
+                    <td class="period-cell">Bu dönem</td>
+                    <td class="carry-cell">${escapeHtml(fmt(s.carry_over))}</td>
+                    <td class="muted-cell">–</td>
+                    <td class="muted-cell">–</td>
+                    <td class="muted-cell">–</td>
+                    <td class="muted-cell">–</td>
+                    <td class="remaining-cell">${escapeHtml(fmt(s.remaining))}</td>
+                    <td>
+                        <button class="btn btn-outline btn-sm enter-statement-btn" type="button">Ekstreyi gir</button>
+                    </td>
+                </tr>`;
+            }
+            return `
+                <tr data-id="${s.id}">
+                    <td class="period-cell">${escapeHtml(periodLabel(s.cutoff_date))}</td>
+                    <td class="carry-cell">${s.carry_over > 0 ? escapeHtml(fmt(s.carry_over)) : '–'}</td>
+                    <td class="new-cell">${escapeHtml(fmt(s.new_spending))}</td>
+                    <td>${escapeHtml(fmt(s.total_debt))}</td>
+                    <td class="muted-cell">${escapeHtml(fmt(s.min_payment))}</td>
+                    <td>${escapeHtml(fmt(s.amount_paid))}</td>
+                    <td class="remaining-cell">${escapeHtml(fmt(s.remaining))}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-btn edit-btn" title="Düzenle" type="button">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </button>
+                            <button class="action-btn delete delete-btn" title="Sil" type="button">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
         }).join('');
     }
 
-    async function loadBanks() {
-        try {
-            const response = await fetch('/tracker/api/banks/');
-            if (response.ok) {
-                const banks = await response.json();
-                bankSelect.innerHTML = '<option value="">Banka seçin</option>';
-                banks.forEach(bank => {
-                    const option = document.createElement('option');
-                    option.value = bank.id;
-                    option.textContent = bank.name;
-                    bankSelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Bankalar yüklenemedi:', error);
+    // ----- MODAL -----
+
+    function updatePreview() {
+        const total = parseFloat(inputTotalDebt.value || 0);
+        const paid = parseFloat(inputAmountPaid.value || 0);
+        const coeff = parseFloat(inputMinCoeff.value || 0);
+        const newSpending = total - state.carryOver;
+
+        document.getElementById('previewNewSpending').textContent = fmt(newSpending);
+        document.getElementById('previewMinPayment').textContent = fmt(total * coeff);
+        document.getElementById('previewRemaining').textContent = fmt(total - paid);
+
+        const warning = document.getElementById('previewWarning');
+        if (inputTotalDebt.value && newSpending < 0) {
+            warning.style.display = 'block';
+            warning.textContent =
+                'Ekstre toplamı devirden küçük. Kesim sonrası ödeme yaptıysanız normaldir, ' +
+                'aksi halde önceki dönemin ödenen tutarını kontrol edin.';
+        } else {
+            warning.style.display = 'none';
         }
     }
 
-    async function openModal(debt = null) {
-        await loadBanks();
-        editingId = debt ? debt.id : null;
-        modalTitle.textContent = debt ? 'Borç Düzenle' : 'Borç Ekle';
+    function openModal(statement) {
+        const card = selectedCard();
+        state.editing = statement && !statement.virtual ? statement : null;
+        state.carryOver = Number(statement.carry_over || 0);
 
-        if (debt) {
-            debtForm.querySelector('[name="bank"]').value = debt.bank;
-            debtForm.querySelector('[name="total_debt"]').value = debt.total_debt;
-            debtForm.querySelector('[name="min_payment_coeff"]').value = debt.min_payment_coeff;
-            debtForm.querySelector('[name="amount_paid"]').value = debt.amount_paid || '';
-            debtForm.querySelector('[name="cutoff_date"]').value = debt.cutoff_date || '';
+        modalTitle.textContent = state.editing ? 'Ekstreyi Düzenle' : 'Ekstre Gir';
+        document.getElementById('ctxCardName').textContent = card.name;
+        document.getElementById('ctxCarryOver').textContent = fmt(state.carryOver);
+
+        if (state.editing) {
+            inputTotalDebt.value = statement.total_debt;
+            inputAmountPaid.value = statement.amount_paid || '';
+            inputMinCoeff.value = statement.min_payment_coeff;
+            inputCutoffDate.value = statement.cutoff_date || '';
         } else {
-            debtForm.reset();
+            form.reset();
+            inputCutoffDate.value = statement.suggested_cutoff_date || '';
+            inputMinCoeff.value = statement.suggested_min_payment_coeff || '';
         }
 
+        updatePreview();
         overlay.classList.add('active');
         modal.classList.add('active');
+        inputTotalDebt.focus();
     }
 
     function closeModal() {
         overlay.classList.remove('active');
         modal.classList.remove('active');
-        editingId = null;
+        state.editing = null;
     }
 
-    async function saveDebt(data) {
-        try {
-            const url = editingId
-                ? `/tracker/api/debts/${editingId}/`
-                : '/tracker/api/debts/';
-            const method = editingId ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(data)
-            });
-            if (response.ok) {
-                closeModal();
-                debtForm.reset();
-                loadDebts();
-            } else {
-                const error = await response.json();
-                alert('Kaydetme başarısız: ' + JSON.stringify(error));
-            }
-        } catch (error) {
-            console.error('Borç kaydedilemedi:', error);
-        }
-    }
-
-    async function deleteDebt(id) {
-        if (!confirm('Bu borcu silmek istediğinizden emin misiniz?')) return;
-
-        try {
-            const response = await fetch(`/tracker/api/debts/${id}/`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            });
-            if (response.ok) {
-                loadDebts();
-            } else {
-                alert('Borç silinemedi');
-            }
-        } catch (error) {
-            console.error('Borç silinemedi:', error);
-        }
-    }
-
-    debtForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(debtForm);
-        const data = {
-            bank: formData.get('bank'),
-            total_debt: formData.get('total_debt'),
-            min_payment_coeff: formData.get('min_payment_coeff'),
-            amount_paid: formData.get('amount_paid') || null,
-            cutoff_date: formData.get('cutoff_date') || null
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const payload = {
+            bank: state.selectedCardId,
+            total_debt: inputTotalDebt.value,
+            min_payment_coeff: inputMinCoeff.value,
+            amount_paid: inputAmountPaid.value || null,
+            cutoff_date: inputCutoffDate.value
         };
-        saveDebt(data);
+        try {
+            await api(
+                state.editing ? `${STATEMENTS_URL}${state.editing.id}/` : STATEMENTS_URL,
+                { method: state.editing ? 'PUT' : 'POST', body: JSON.stringify(payload) }
+            );
+            closeModal();
+            await loadCards();
+        } catch (err) {
+            alert('Ekstre kaydedilemedi.\n\n' + err.message);
+        }
     });
 
-    addBtn.addEventListener('click', () => openModal());
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) closeModal();
-    });
+    statementsBody.addEventListener('click', async function (event) {
+        if (event.target.closest('.enter-statement-btn')) {
+            openModal(state.statements.find(s => s.virtual));
+            return;
+        }
 
-    tableBody.addEventListener('click', async function(e) {
-        const row = e.target.closest('tr');
+        const row = event.target.closest('tr[data-id]');
         if (!row) return;
-        const id = row.dataset.id;
+        const id = Number(row.dataset.id);
 
-        const editBtn = e.target.closest('.edit-btn');
-        if (editBtn) {
-            const response = await fetch(`/tracker/api/debts/${id}/`);
-            if (response.ok) {
-                const debt = await response.json();
-                openModal(debt);
+        if (event.target.closest('.edit-btn')) {
+            openModal(state.statements.find(s => s.id === id));
+            return;
+        }
+
+        if (event.target.closest('.delete-btn')) {
+            if (!confirm('Bu ekstre kaydını silmek istediğinizden emin misiniz?')) return;
+            try {
+                await api(`${STATEMENTS_URL}${id}/`, { method: 'DELETE' });
+                await loadCards();
+            } catch (err) {
+                alert('Ekstre silinemedi.\n\n' + err.message);
             }
         }
-
-        const deleteBtn = e.target.closest('.delete-btn');
-        if (deleteBtn) {
-            deleteDebt(id);
-        }
     });
 
-    searchInput.addEventListener('input', applySearch);
-    filterMonth.addEventListener('change', function() { loadDebts(); });
+    [inputTotalDebt, inputAmountPaid, inputMinCoeff].forEach(input => {
+        input.addEventListener('input', updatePreview);
+    });
 
-    loadDebts();
+    addStatementBtn.addEventListener('click', function () {
+        const pending = state.statements.find(s => s.virtual);
+        if (pending) openModal(pending);
+    });
+
+    document.getElementById('closeStatementModal').addEventListener('click', closeModal);
+    document.getElementById('cancelStatementBtn').addEventListener('click', closeModal);
+    overlay.addEventListener('click', event => {
+        if (event.target === overlay) closeModal();
+    });
+    cardSearch.addEventListener('input', renderCards);
+
+    loadCards();
 });
 </script>
 {% endblock %}

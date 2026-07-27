@@ -11,6 +11,11 @@
         margin-bottom: 24px;
     }
 
+    .summary-sub {
+        font-size: 11px;
+        margin-top: 2px;
+    }
+
     .chart-card {
         background: var(--bg-secondary);
         border: 1px solid var(--border-color);
@@ -146,8 +151,22 @@
             </svg>
         </div>
         <div class="summary-content">
-            <span class="summary-label">Toplam Borç</span>
+            <span class="summary-label">Kalan Kart Borcu</span>
             <span class="summary-value text-danger" id="totalDebt">₺0</span>
+            <span class="summary-sub text-muted" id="totalDebtSub"></span>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05)); color: #22c55e;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Ödenen Borç</span>
+            <span class="summary-value text-success" id="totalDebtPaid">₺0</span>
+            <span class="summary-sub text-muted" id="totalDebtPaidSub"></span>
         </div>
     </div>
     <div class="summary-card">
@@ -542,7 +561,9 @@ function renderTrendChart(data) {
     const labels = data.map(d => d.label);
     const income = data.map(d => d.income);
     const expenses = data.map(d => d.expenses);
-    const debts = data.map(d => d.debts);
+    // Ekstre toplami degil, o ay karta gercekten girilen tutar cizilir; aksi
+    // halde devreden bakiye her ay yeniden sayilip trend sisiyor.
+    const debts = data.map(d => d.debt_new_spending);
     const credits = data.map(d => d.credits);
     const shopping = data.map(d => d.shopping);
 
@@ -578,7 +599,7 @@ function renderTrendChart(data) {
                     pointBackgroundColor: '#FFC107'
                 },
                 {
-                    label: 'Borçlar',
+                    label: 'Kart Harcaması',
                     data: debts,
                     borderColor: '#ff4757',
                     backgroundColor: 'rgba(255, 71, 87, 0.1)',
@@ -668,8 +689,20 @@ async function loadDashboard() {
         const totalExp = Object.values(data.expenses_by_category).reduce((s, v) => s + (v.actual || v.expected || 0), 0);
         document.getElementById('totalExpenses').textContent = fmt(totalExp);
 
+        // Ekstre toplami devri de icerdigi icin "borcum ne kadar" sorusunun
+        // cevabi degil; kalan bakiye gosteriliyor, o ayki kart harcamasi altta.
         const ds = data.debts_summary;
-        document.getElementById('totalDebt').textContent = fmt(ds.total_debt);
+        document.getElementById('totalDebt').textContent = fmt(ds.remaining);
+        document.getElementById('totalDebtSub').textContent =
+            'Bu ay kart harcaması ' + fmt(ds.new_spending);
+
+        document.getElementById('totalDebtPaid').textContent = fmt(ds.total_paid);
+        // Ekstre toplaminin yuzde kaci kapatilmis: devirle birlikte toplam borcun payi.
+        const paidRatio = ds.total_debt
+            ? Math.round((ds.total_paid / ds.total_debt) * 100)
+            : 0;
+        document.getElementById('totalDebtPaidSub').textContent =
+            'Ekstre toplamının %' + paidRatio + "'i";
 
         const cs = data.credits_summary;
         document.getElementById('totalCredits').textContent = fmt(cs.total_monthly);

@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.contrib.auth import get_user_model
 AppUser = get_user_model()
@@ -33,10 +34,26 @@ class Expense(models.Model):
 
 
 class Banks(models.Model):
+    """Kayitli bir banka = o bankadaki kredi karti.
+
+    Kartin donemsel ekstreleri `Debts` satirlari olarak tutulur.
+    """
+
     user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="bank_name")
     name = models.CharField(verbose_name="Bank_Name",max_length=64)
     created_at = models.DateTimeField(auto_now_add=True)
     logo = models.ImageField(verbose_name="Bank_Logo",upload_to="bank_logo")
+    card_limit = models.DecimalField(
+        verbose_name="Kart Limiti", max_digits=12, decimal_places=2,
+        null=True, blank=True,
+        help_text="Bos birakilirsa doluluk gostergesi gizlenir.",
+    )
+    statement_day = models.PositiveSmallIntegerField(
+        verbose_name="Hesap Kesim Gunu",
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+        help_text="Bos birakilirsa son ekstrenin gununden turetilir.",
+    )
 
     class Meta:
         unique_together = ("user","name")
@@ -51,6 +68,18 @@ class Debts(models.Model):
     bank = models.ForeignKey(Banks, on_delete=models.RESTRICT, verbose_name="bank")
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     cutoff_date = models.DateField(blank=True, null=True)
+
+    class Meta:
+        constraints = [
+            # Bir banka icin bir kesim tarihinde tek ekstre satiri olabilir.
+            # nulls_distinct=False: kesim tarihi bos olan iki kayit da cakisir,
+            # cunku ikisi de "tarihsiz" ayni ekstreyi temsil eder.
+            models.UniqueConstraint(
+                fields=["user", "bank", "cutoff_date"],
+                name="uniq_debt_per_bank_and_cutoff",
+                nulls_distinct=False,
+            )
+        ]
 
     @property
     def is_closed(self):

@@ -65,6 +65,22 @@
                     <label class="form-label">Banka Adı</label>
                     <input type="text" name="name" id="bankName" class="input-neon" placeholder="örn. Ziraat, Garanti BBVA" required>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Kart Limiti</label>
+                        <input type="number" step="0.01" min="0" name="card_limit" id="bankCardLimit"
+                               class="input-neon" placeholder="örn. 50000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hesap Kesim Günü</label>
+                        <input type="number" min="1" max="31" name="statement_day" id="bankStatementDay"
+                               class="input-neon" placeholder="örn. 6">
+                    </div>
+                </div>
+                <p class="text-muted" style="font-size: 12px; margin-bottom: 16px;">
+                    İkisi de isteğe bağlı. Limit girilirse kart kutusunda doluluk çubuğu görünür,
+                    kesim günü girilirse yeni ekstre tarihi otomatik önerilir.
+                </p>
                 <div class="form-group">
                     <label class="form-label">Banka Logosu</label>
                     <div class="file-upload">
@@ -164,6 +180,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    const TRY_FMT = new Intl.NumberFormat('tr-TR', {
+        style: 'currency', currency: 'TRY', minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+
+    function fmtTRY(value) {
+        return TRY_FMT.format(Number(value || 0));
+    }
+
+    function escapeHtml(value) {
+        return String(value === null || value === undefined ? '' : value).replace(
+            /[&<>"']/g,
+            c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+        );
+    }
+
     // Render banks
     function renderBanks(banks) {
         banksGrid.innerHTML = '';
@@ -188,9 +219,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const card = document.createElement('div');
             card.className = 'bank-card';
             card.dataset.id = bank.id;
+            const limitLine = bank.card_limit
+                ? `<span class="text-muted" style="font-size: 11px; margin-top: 6px;">Limit ${escapeHtml(fmtTRY(bank.card_limit))}</span>`
+                : '';
             card.innerHTML = `
-                ${bank.logo ? `<img src="${bank.logo}" alt="${bank.name}" class="bank-logo">` : ''}
-                <span class="bank-name">${bank.name}</span>
+                ${bank.logo ? `<img src="${escapeHtml(bank.logo)}" alt="" class="bank-logo">` : ''}
+                <span class="bank-name">${escapeHtml(bank.name)}</span>
+                ${limitLine}
             `;
             banksGrid.appendChild(card);
         });
@@ -258,6 +293,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const formData = new FormData();
         formData.append('name', name);
+
+        // Bos birakilan opsiyonel alanlari hic gondermiyoruz; bos string
+        // DecimalField/IntegerField dogrulamasindan gecmez.
+        const cardLimit = document.getElementById('bankCardLimit').value.trim();
+        if (cardLimit) formData.append('card_limit', cardLimit);
+
+        const statementDay = document.getElementById('bankStatementDay').value.trim();
+        if (statementDay) formData.append('statement_day', statementDay);
+
         if (fileInput.files[0]) {
             formData.append('logo', fileInput.files[0]);
         }

@@ -56,50 +56,97 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
 class BanksSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Banks 
-        fields = ('id','name','logo')
+        model = Banks
+        fields = ('id','name','logo','card_limit','statement_day')
         read_only = ('id',)
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user 
+        validated_data['user'] = self.context['request'].user
         return super().create(validated_data=validated_data)
+
+
+def build_carry_map(user, bank_ids):
+    """{ekstre_id: devir} haritasini tek sorguda kurar.
+
+    devir(n) = kalan(n-1) = onceki ekstrenin toplam borcu eksi odenen tutari.
+    Zincir kartin *filtrelenmemis* tum gecmisi uzerinden yurutulur; ay filtresi
+    uygulanmis bir liste icin de dogru devir bu sayede cikar. Ayni sebeple
+    pencere fonksiyonu (Lag) kullanilamaz: o, filtrelenmis kume uzerinden kayar.
+    """
+    if not bank_ids:
+        return {}
+    rows = (
+        Debts.objects
+        .filter(user=user, bank_id__in=bank_ids)
+        .order_by('bank_id', 'cutoff_date', 'id')
+        .values('id', 'bank_id', 'total_debt', 'amount_paid')
+    )
+    carry, prev_bank, running = {}, None, 0.0
+    for row in rows:
+        if row['bank_id'] != prev_bank:
+            running, prev_bank = 0.0, row['bank_id']
+        carry[row['id']] = running
+        running = float(row['total_debt']) - float(row['amount_paid'] or 0)
+    return carry
+
 
 class DebtsSerializer(serializers.ModelSerializer):
     bank_name = serializers.CharField(source='bank.name', read_only=True)
     is_closed = serializers.BooleanField(read_only=True)
     carry_over = serializers.SerializerMethodField()
     new_spending = serializers.SerializerMethodField()
+    remaining = serializers.SerializerMethodField()
+    min_payment = serializers.SerializerMethodField()
 
     class Meta:
         model = Debts
         fields = (
             'id', 'total_debt', 'min_payment_coeff', 'bank', 'bank_name',
-            'amount_paid', 'cutoff_date', 'is_closed', 'carry_over', 'new_spending'
+            'amount_paid', 'cutoff_date', 'is_closed', 'carry_over', 'new_spending',
+            'remaining', 'min_payment',
         )
         read_only_fields = ('id',)
+        extra_kwargs = {
+            # Kesim tarihi olmayan bir borc hicbir ay filtresine dusmez ve
+            # devir zincirinde yerini bulamaz; zorunlu tutuyoruz.
+            'cutoff_date': {'required': True, 'allow_null': False},
+        }
 
-    def _get_previous_month_remaining(self, obj):
+    def _previous_remaining(self, obj):
+        """Bu kayittan onceki en yakin ayni-kart ekstresinin kalan bakiyesi.
+
+        Once view'in context'e koydugu toplu devir haritasina bakar. Harita yoksa
+        (tekil retrieve/create yanitlari) tek satirlik sorguya duser; iki yol da
+        ayni sonucu verir.
+        """
+        carry_map = self.context.get('carry_map')
+        if carry_map is not None and obj.pk in carry_map:
+            return carry_map[obj.pk]
+
         if not obj.cutoff_date:
             return 0
-        m = obj.cutoff_date.month - 1
-        y = obj.cutoff_date.year
-        if m < 1:
-            m = 12
-            y -= 1
-        prev = Debts.objects.filter(
-            user=obj.user, bank=obj.bank,
-            cutoff_date__year=y, cutoff_date__month=m
-        ).first()
-        if not prev:
-            return 0
-        return float(prev.total_debt) - float(prev.amount_paid or 0)
+        if not hasattr(obj, '_carry_over_cache'):
+            prev = Debts.objects.filter(
+                user_id=obj.user_id, bank_id=obj.bank_id,
+                cutoff_date__lt=obj.cutoff_date,
+            ).order_by('-cutoff_date', '-id').first()
+            obj._carry_over_cache = (
+                0 if prev is None
+                else float(prev.total_debt) - float(prev.amount_paid or 0)
+            )
+        return obj._carry_over_cache
 
     def get_carry_over(self, obj):
-        return self._get_previous_month_remaining(obj)
+        return self._previous_remaining(obj)
 
     def get_new_spending(self, obj):
-        carry = self._get_previous_month_remaining(obj)
-        return float(obj.total_debt) - carry
+        return float(obj.total_debt) - self._previous_remaining(obj)
+
+    def get_remaining(self, obj):
+        return float(obj.total_debt) - float(obj.amount_paid or 0)
+
+    def get_min_payment(self, obj):
+        return float(obj.total_debt) * float(obj.min_payment_coeff)
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
@@ -108,8 +155,27 @@ class DebtsSerializer(serializers.ModelSerializer):
     def validate_bank(self, value):
         user = self.context['request'].user
         if value.user != user:
-            raise serializers.ValidationError("This bank is not yours")
+            raise serializers.ValidationError("Bu banka size ait değil.")
         return value
+
+    def validate(self, attrs):
+        # (user, bank, cutoff_date) uzerindeki UniqueConstraint'i DRF kendisi
+        # dogrulayamiyor: `user` serializer alani olmadigi icin otomatik
+        # UniqueTogetherValidator uretilmiyor. Elle kontrol edip 500 yerine
+        # duzgun bir 400 donduruyoruz.
+        bank = attrs.get('bank', getattr(self.instance, 'bank', None))
+        cutoff_date = attrs.get('cutoff_date', getattr(self.instance, 'cutoff_date', None))
+
+        duplicates = Debts.objects.filter(
+            user=self.context['request'].user, bank=bank, cutoff_date=cutoff_date
+        )
+        if self.instance is not None:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise serializers.ValidationError({
+                'cutoff_date': 'Bu banka için bu kesim tarihinde zaten bir borç kaydı var.'
+            })
+        return attrs
     
      
 class CreditInstallmentSerializer(serializers.ModelSerializer):
