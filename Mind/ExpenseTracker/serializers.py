@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from .statements import effective_statement_day, statement_cutoff_for
 from .models import ExpenseCategory
 from .models import Expense
 from .models import Banks
@@ -26,12 +28,29 @@ class ExpenseCategorySerializer(serializers.ModelSerializer):
 
 class ExpenseSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
+    card_name = serializers.CharField(source='card.name', read_only=True, default=None)
+    target_cutoff_date = serializers.SerializerMethodField()
 
     class Meta:
         model = Expense
-        fields = ('id','description','expected_amount','actual_amount','category','category_name','pay_day', 'notes')
+        fields = (
+            'id', 'description', 'expected_amount', 'actual_amount', 'category',
+            'category_name', 'pay_day', 'notes', 'payment_method', 'card',
+            'card_name', 'target_cutoff_date',
+        )
         read_only = ('id',)
 
+    def get_target_cutoff_date(self, obj):
+        """Kart harcamasinin hangi ekstreye yazildigi. Nakitte None."""
+        if obj.payment_method != Expense.PaymentMethod.CREDIT or not obj.card_id:
+            return None
+        statement_days = self.context.get('statement_days')
+        if statement_days is not None:
+            statement_day = statement_days.get(obj.card_id)
+        else:
+            statement_day = effective_statement_day(obj.card)
+        cutoff = statement_cutoff_for(obj.pay_day, statement_day)
+        return cutoff.isoformat() if cutoff else None
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
@@ -44,14 +63,47 @@ class ExpenseSerializer(serializers.ModelSerializer):
         instance.category = validated_data.get('category', instance.category)
         instance.pay_day = validated_data.get('pay_day', instance.pay_day)
         instance.notes = validated_data.get('notes', instance.notes)
+        instance.payment_method = validated_data.get('payment_method', instance.payment_method)
+        instance.card = validated_data.get('card', instance.card)
         instance.save()
         return instance
 
     def validate_category(self,value):
         user = self.context['request'].user
         if value.user != user:
-            raise serializers.ValidationError("This category is not yours!")
+            raise serializers.ValidationError("Bu kategori size ait değil.")
         return value
+
+    def validate_card(self, value):
+        if value is None:
+            return value
+        if value.user != self.context['request'].user:
+            raise serializers.ValidationError("Bu kart size ait değil.")
+        return value
+
+    def validate(self, attrs):
+        method = attrs.get(
+            'payment_method',
+            getattr(self.instance, 'payment_method', Expense.PaymentMethod.CASH),
+        )
+        card = attrs.get('card', getattr(self.instance, 'card', None))
+
+        if method == Expense.PaymentMethod.CREDIT:
+            if card is None:
+                raise serializers.ValidationError({
+                    'card': 'Kredi kartı ödemesinde kart seçmelisiniz.'
+                })
+            # Kesim gunu bilinmeden harcama bir doneme atanamaz.
+            if effective_statement_day(card) is None:
+                raise serializers.ValidationError({
+                    'card': f'{card.name} için hesap kesim günü tanımlı değil. '
+                            'Bankalar sayfasından kesim gününü girin.'
+                })
+        elif card is not None:
+            raise serializers.ValidationError({
+                'card': 'Nakit ödemede kart seçilemez.'
+            })
+        return attrs
 
 
 class BanksSerializer(serializers.ModelSerializer):
@@ -65,31 +117,6 @@ class BanksSerializer(serializers.ModelSerializer):
         return super().create(validated_data=validated_data)
 
 
-def build_carry_map(user, bank_ids):
-    """{ekstre_id: devir} haritasini tek sorguda kurar.
-
-    devir(n) = kalan(n-1) = onceki ekstrenin toplam borcu eksi odenen tutari.
-    Zincir kartin *filtrelenmemis* tum gecmisi uzerinden yurutulur; ay filtresi
-    uygulanmis bir liste icin de dogru devir bu sayede cikar. Ayni sebeple
-    pencere fonksiyonu (Lag) kullanilamaz: o, filtrelenmis kume uzerinden kayar.
-    """
-    if not bank_ids:
-        return {}
-    rows = (
-        Debts.objects
-        .filter(user=user, bank_id__in=bank_ids)
-        .order_by('bank_id', 'cutoff_date', 'id')
-        .values('id', 'bank_id', 'total_debt', 'amount_paid')
-    )
-    carry, prev_bank, running = {}, None, 0.0
-    for row in rows:
-        if row['bank_id'] != prev_bank:
-            running, prev_bank = 0.0, row['bank_id']
-        carry[row['id']] = running
-        running = float(row['total_debt']) - float(row['amount_paid'] or 0)
-    return carry
-
-
 class DebtsSerializer(serializers.ModelSerializer):
     bank_name = serializers.CharField(source='bank.name', read_only=True)
     is_closed = serializers.BooleanField(read_only=True)
@@ -97,13 +124,15 @@ class DebtsSerializer(serializers.ModelSerializer):
     new_spending = serializers.SerializerMethodField()
     remaining = serializers.SerializerMethodField()
     min_payment = serializers.SerializerMethodField()
+    logged_spending = serializers.SerializerMethodField()
+    spending_diff = serializers.SerializerMethodField()
 
     class Meta:
         model = Debts
         fields = (
             'id', 'total_debt', 'min_payment_coeff', 'bank', 'bank_name',
             'amount_paid', 'cutoff_date', 'is_closed', 'carry_over', 'new_spending',
-            'remaining', 'min_payment',
+            'remaining', 'min_payment', 'logged_spending', 'spending_diff',
         )
         read_only_fields = ('id',)
         extra_kwargs = {
@@ -147,6 +176,24 @@ class DebtsSerializer(serializers.ModelSerializer):
 
     def get_min_payment(self, obj):
         return float(obj.total_debt) * float(obj.min_payment_coeff)
+
+    def get_logged_spending(self, obj):
+        """Bu doneme giderlerden islenmis kart harcamasi toplami."""
+        logged = self.context.get('logged_spending')
+        if logged is None:
+            return None
+        return logged.get((obj.bank_id, obj.cutoff_date), 0.0)
+
+    def get_spending_diff(self, obj):
+        """Ekstredeki yeni harcama ile kayitlarin arasindaki fark.
+
+        Pozitifse bankanin ekledigi ama kaydedilmemis tutar vardir (faiz,
+        aidat, unutulmus harcama); negatifse fazla kayit girilmistir.
+        """
+        logged = self.get_logged_spending(obj)
+        if logged is None:
+            return None
+        return self.get_new_spending(obj) - logged
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user

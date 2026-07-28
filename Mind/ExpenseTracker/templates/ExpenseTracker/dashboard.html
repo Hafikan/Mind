@@ -141,6 +141,7 @@
         <div class="summary-content">
             <span class="summary-label">Toplam Gider</span>
             <span class="summary-value" id="totalExpenses">₺0</span>
+            <span class="summary-sub text-muted" id="totalExpensesSub"></span>
         </div>
     </div>
     <div class="summary-card">
@@ -686,8 +687,12 @@ async function loadDashboard() {
         const incomeTotal = data.income_summary.total;
         document.getElementById('totalIncome').textContent = fmt(incomeTotal);
 
-        const totalExp = Object.values(data.expenses_by_category).reduce((s, v) => s + (v.actual || v.expected || 0), 0);
+        const es = data.expenses_summary;
+        const totalExp = es.total;
         document.getElementById('totalExpenses').textContent = fmt(totalExp);
+        document.getElementById('totalExpensesSub').textContent = es.card
+            ? fmt(es.card) + "'i kart harcaması"
+            : 'Tamamı nakit';
 
         // Ekstre toplami devri de icerdigi icin "borcum ne kadar" sorusunun
         // cevabi degil; kalan bakiye gosteriliyor, o ayki kart harcamasi altta.
@@ -710,7 +715,9 @@ async function loadDashboard() {
         const shoppingTotal = data.shopping_summary.total;
         document.getElementById('totalShopping').textContent = fmt(shoppingTotal);
 
-        const net = incomeTotal - totalExp - ds.total_paid - cs.total_monthly - shoppingTotal;
+        // Kartla yapilan gider bu ay nakit cikisi degil; para kart odemesinde
+        // (ds.total_paid) cikiyor. Ikisini birden dusmek ayni tutari iki kez sayar.
+        const net = incomeTotal - es.cash - ds.total_paid - cs.total_monthly - shoppingTotal;
         const netEl = document.getElementById('netTotal');
         netEl.className = 'summary-value ' + (net >= 0 ? 'text-success' : 'text-danger');
         netEl.textContent = (net < 0 ? '-' : '+') + fmt(Math.abs(net));

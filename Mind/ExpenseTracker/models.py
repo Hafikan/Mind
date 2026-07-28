@@ -17,6 +17,10 @@ class ExpenseCategory(models.Model):
         return self.name
 
 class Expense(models.Model):
+    class PaymentMethod(models.TextChoices):
+        CASH = 'cash', 'Nakit'
+        CREDIT = 'credit', 'Kredi Kartı'
+
     user = models.ForeignKey(AppUser, related_name="expenses", on_delete=models.CASCADE)
     description = models.CharField(max_length=255)
     expected_amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -24,13 +28,44 @@ class Expense(models.Model):
     category = models.ForeignKey(ExpenseCategory,on_delete=models.CASCADE, related_name="expense_category")
     pay_day = models.DateField(verbose_name="Pay_Day")
     notes = models.TextField(blank=True, null=True)
-    
+    payment_method = models.CharField(
+        verbose_name="Ödeme Yöntemi",
+        max_length=8,
+        choices=PaymentMethod.choices,
+        default=PaymentMethod.CASH,
+    )
+    card = models.ForeignKey(
+        "Banks",
+        verbose_name="Kredi Kartı",
+        on_delete=models.RESTRICT,
+        related_name="card_expenses",
+        null=True,
+        blank=True,
+        help_text="Yalnizca kredi kartiyla yapilan harcamalarda dolu olur.",
+    )
+
+    @property
+    def charged_amount(self):
+        """Karta yansiyan tutar: gerceklesen varsa o, yoksa beklenen."""
+        return self.actual_amount if self.actual_amount is not None else self.expected_amount
+
     def __str__(self):
         return f"{self.description}-{self.actual_amount}"
 
     class Meta:
         verbose_name="Expense"
         verbose_name_plural = "Expenses"
+        constraints = [
+            # Kart yalnizca kredi odemelerinde dolu olabilir; nakit bir giderin
+            # karta baglanmasi devir hesabini sessizce bozar.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(payment_method="credit", card__isnull=False)
+                    | models.Q(payment_method="cash", card__isnull=True)
+                ),
+                name="expense_card_matches_payment_method",
+            )
+        ]
 
 
 class Banks(models.Model):

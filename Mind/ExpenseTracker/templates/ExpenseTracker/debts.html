@@ -93,7 +93,12 @@
                         <span class="ctx-label">Devir (önceki dönemden kalan)</span>
                         <span class="ctx-value ctx-carry" id="ctxCarryOver">₺0,00</span>
                     </div>
+                    <div class="ctx-row" id="ctxLoggedRow" hidden>
+                        <span class="ctx-label">Giderlere işlenmiş kart harcaması</span>
+                        <span class="ctx-value ctx-logged" id="ctxLogged">₺0,00</span>
+                    </div>
                 </div>
+                <p class="expected-hint" id="expectedHint" hidden></p>
 
                 <div class="form-row">
                     <div class="form-group">
@@ -286,6 +291,31 @@
     color: var(--text-muted);
 }
 
+.pending-tag,
+.estimate-tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 20px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(255, 193, 7, 0.15);
+    color: var(--accent-primary);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.estimate-cell {
+    color: var(--text-secondary);
+}
+
+.recon-mark {
+    margin-left: 4px;
+    color: var(--accent-primary);
+    cursor: help;
+}
+
 .carry-cell {
     color: #a855f7;
     font-weight: 600;
@@ -333,6 +363,16 @@
 
 .ctx-carry {
     color: #a855f7;
+}
+
+.ctx-logged {
+    color: #f97316;
+}
+
+.expected-hint {
+    margin: -8px 0 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
 }
 
 .statement-preview {
@@ -550,6 +590,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    /**
+     * Ekstredeki yeni harcama ile giderlere islenmis kart harcamasi arasindaki
+     * fark. Sifirdan buyukse bankanin ekledigi ama kaydedilmemis bir tutar var
+     * demektir (faiz, aidat, unutulmus harcama).
+     */
+    function reconciliationMark(statement) {
+        const logged = Number(statement.logged_spending || 0);
+        const diff = Number(statement.spending_diff || 0);
+        if (!logged || Math.abs(diff) < 0.01) return '';
+        const sign = diff > 0 ? '+' : '−';
+        const title =
+            `Kayıtlı kart harcaması ${fmt(logged)}; ekstreyle farkı ${sign}${fmt(Math.abs(diff))}`;
+        return ` <span class="recon-mark" title="${title}">⚠</span>`;
+    }
+
     function renderStatements() {
         const card = selectedCard();
         statementsCard.style.display = 'block';
@@ -572,12 +627,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         statementsBody.innerHTML = state.statements.map(s => {
             if (s.virtual) {
+                const logged = Number(s.logged_spending || 0);
                 return `
                 <tr class="statement-row-virtual">
-                    <td class="period-cell">Bu dönem</td>
+                    <td class="period-cell">${escapeHtml(periodLabel(s.suggested_cutoff_date))} <span class="pending-tag">bekliyor</span></td>
                     <td class="carry-cell">${escapeHtml(fmt(s.carry_over))}</td>
-                    <td class="muted-cell">–</td>
-                    <td class="muted-cell">–</td>
+                    <td class="new-cell">${logged ? escapeHtml(fmt(logged)) : '–'}</td>
+                    <td class="estimate-cell">${logged ? escapeHtml(fmt(s.expected_total)) + ' <span class="estimate-tag">tahmin</span>' : '–'}</td>
                     <td class="muted-cell">–</td>
                     <td class="muted-cell">–</td>
                     <td class="remaining-cell">${escapeHtml(fmt(s.remaining))}</td>
@@ -590,7 +646,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <tr data-id="${s.id}">
                     <td class="period-cell">${escapeHtml(periodLabel(s.cutoff_date))}</td>
                     <td class="carry-cell">${s.carry_over > 0 ? escapeHtml(fmt(s.carry_over)) : '–'}</td>
-                    <td class="new-cell">${escapeHtml(fmt(s.new_spending))}</td>
+                    <td class="new-cell">${escapeHtml(fmt(s.new_spending))}${reconciliationMark(s)}</td>
                     <td>${escapeHtml(fmt(s.total_debt))}</td>
                     <td class="muted-cell">${escapeHtml(fmt(s.min_payment))}</td>
                     <td>${escapeHtml(fmt(s.amount_paid))}</td>
@@ -646,6 +702,21 @@ document.addEventListener('DOMContentLoaded', function () {
         modalTitle.textContent = state.editing ? 'Ekstreyi Düzenle' : 'Ekstre Gir';
         document.getElementById('ctxCardName').textContent = card.name;
         document.getElementById('ctxCarryOver').textContent = fmt(state.carryOver);
+
+        // Giderlerden birikmis kart harcamasi varsa beklenen toplami hatirlat.
+        // Alan doldurulmaz: gercegin kaynagi bankadan gelen ekstredir.
+        const logged = Number(statement.logged_spending || 0);
+        const loggedRow = document.getElementById('ctxLoggedRow');
+        const expectedHint = document.getElementById('expectedHint');
+        loggedRow.hidden = !logged;
+        expectedHint.hidden = !logged;
+        if (logged) {
+            document.getElementById('ctxLogged').textContent = fmt(logged);
+            expectedHint.textContent =
+                'Kayıtlarına göre beklenen ekstre toplamı ' +
+                fmt(state.carryOver + logged) +
+                '. Bankadan gelen tutarı gir; fark faiz/aidat ya da kaydetmediğin harcamadır.';
+        }
 
         if (state.editing) {
             inputTotalDebt.value = statement.total_debt;

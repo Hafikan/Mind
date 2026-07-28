@@ -5,7 +5,13 @@ from .serializers import DebtsSerializer
 from .serializers import CreditsSerializer
 from .serializers import IncomeSerializer
 from .serializers import ShoppingSerializer
-from .serializers import build_carry_map
+from .statements import (
+    build_carry_map,
+    build_logged_spending_map,
+    build_statement_day_map,
+    latest_statement_per_card,
+    pending_cutoff_for,
+)
 
 from django.db import models as db_models
 from django.db.models import Sum, F, Case, When, BooleanField, DecimalField, Value
@@ -51,9 +57,24 @@ class ExpenseModelViewSet(ModelViewSet):
         if month and year:
             queryset = queryset.filter(pay_day__month=month, pay_day__year=year)
 
+        payment_method = self.request.query_params.get('payment_method')
+        if payment_method:
+            queryset = queryset.filter(payment_method=payment_method)
 
-        
-        return queryset.select_related('category')
+        card_id = self.request.query_params.get('card')
+        if card_id:
+            queryset = queryset.filter(card_id=card_id)
+
+        return queryset.select_related('category', 'card')
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # Kesim gunu haritasi: `target_cutoff_date` icin kart basina sorgu acmaz.
+        context['statement_days'] = build_statement_day_map(
+            self.request.user,
+            list(Banks.objects.filter(user=self.request.user).values_list('id', flat=True)),
+        )
+        return context
 
 
 @login_required
@@ -69,13 +90,17 @@ class BanksModelViewSet(ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def summary(self, request):
-        """Her kart icin guncel borc / limit / kullanilabilir limit ozeti.
+        """Her kart icin guncel borc, limit ve birikmekte olan ekstre ozeti.
 
         `current_debt`, kartin en son ekstresinin kalan bakiyesidir; devir
-        zincirinin bugunku ucu budur.
+        zincirinin bugunku ucu budur. `pending_*` alanlari ise henuz kesilmemis
+        donemde giderlerden birikeni gosterir.
         """
         cards = list(self.get_queryset().order_by('name'))
-        latest = _latest_statement_per_bank(request.user, [c.id for c in cards])
+        bank_ids = [c.id for c in cards]
+        latest = latest_statement_per_card(request.user, bank_ids)
+        statement_days = build_statement_day_map(request.user, bank_ids)
+        logged = build_logged_spending_map(request.user, bank_ids, statement_days)
         today = date.today()
 
         data = []
@@ -86,39 +111,24 @@ class BanksModelViewSet(ModelViewSet):
                 if statement else 0.0
             )
             limit = float(card.card_limit) if card.card_limit is not None else None
+            pending_cutoff = pending_cutoff_for(card, statement, today)
             data.append({
                 'id': card.id,
                 'name': card.name,
                 'logo': request.build_absolute_uri(card.logo.url) if card.logo else None,
                 'card_limit': limit,
                 'statement_day': card.statement_day,
+                'effective_statement_day': statement_days.get(card.id),
                 'current_debt': current_debt,
                 'available_limit': None if limit is None else limit - current_debt,
                 'utilization': (
                     None if not limit else round(current_debt / limit * 100, 1)
                 ),
                 'last_cutoff_date': statement.cutoff_date if statement else None,
-                'has_current_period': bool(
-                    statement
-                    and statement.cutoff_date
-                    and statement.cutoff_date.year == today.year
-                    and statement.cutoff_date.month == today.month
-                ),
+                'pending_cutoff_date': pending_cutoff,
+                'pending_logged_spending': logged.get((card.id, pending_cutoff), 0.0),
             })
         return Response(data)
-
-
-def _latest_statement_per_bank(user, bank_ids):
-    """{bank_id: en guncel Debts satiri} - kart basina son ekstre."""
-    if not bank_ids:
-        return {}
-    latest = {}
-    statements = Debts.objects.filter(
-        user=user, bank_id__in=bank_ids
-    ).order_by('bank_id', 'cutoff_date', 'id')
-    for statement in statements:
-        latest[statement.bank_id] = statement  # siralama artan, sonuncu kazanir
-    return latest
 
 
 @login_required
@@ -148,18 +158,20 @@ class DebtsModelViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        carry_map = getattr(self, '_carry_map', None)
-        if carry_map is not None:
-            context['carry_map'] = carry_map
+        for key in ('carry_map', 'logged_spending'):
+            value = getattr(self, '_' + key, None)
+            if value is not None:
+                context[key] = value
         return context
 
     def list(self, request, *args, **kwargs):
         statements = list(self.filter_queryset(self.get_queryset()))
+        bank_ids = list({s.bank_id for s in statements})
 
-        # Devir zincirini tek sorguda kur; satir basina sorgu acilmaz.
-        self._carry_map = build_carry_map(
-            request.user, list({s.bank_id for s in statements})
-        )
+        # Devir zincirini ve kayitli kart harcamalarini tek sorguda kur;
+        # satir basina sorgu acilmaz.
+        self._carry_map = build_carry_map(request.user, bank_ids)
+        self._logged_spending = build_logged_spending_map(request.user, bank_ids)
         data = self.get_serializer(statements, many=True).data
 
         if request.query_params.get('with_virtual'):
@@ -167,35 +179,36 @@ class DebtsModelViewSet(ModelViewSet):
         return Response(data)
 
     def _virtual_rows(self, request):
-        """Bu donemde henuz ekstresi girilmemis kartlar icin sanal satirlar.
+        """Henuz girilmemis (birikmekte olan) ekstre icin sanal satirlar.
 
-        Kaydedilene kadar veritabaninda karsiligi yoktur; sadece devreden
-        bakiyeyi gorunur kilar ve ekstre girme akisini baslatir.
+        Donem, son ekstreden *sonraki* kesimdir: temmuz ekstresi girilmisse
+        temmuz sonunda yapilan bir kart harcamasi agustos ekstresine birikir.
+        Kaydedilene kadar veritabaninda karsiligi yoktur.
         """
         cards = Banks.objects.filter(user=request.user)
         bank_id = request.query_params.get('bank_id')
         if bank_id:
             cards = cards.filter(id=bank_id)
         cards = list(cards.order_by('name'))
+        bank_ids = [c.id for c in cards]
 
-        latest = _latest_statement_per_bank(request.user, [c.id for c in cards])
+        latest = latest_statement_per_card(request.user, bank_ids)
+        statement_days = build_statement_day_map(request.user, bank_ids)
+        logged_map = build_logged_spending_map(request.user, bank_ids, statement_days)
         today = date.today()
-        days_in_month = calendar.monthrange(today.year, today.month)[1]
 
         rows = []
         for card in cards:
             last = latest.get(card.id)
-            if (
-                last and last.cutoff_date
-                and (last.cutoff_date.year, last.cutoff_date.month) == (today.year, today.month)
-            ):
-                continue  # bu donemin ekstresi zaten girilmis
+            pending_cutoff = pending_cutoff_for(card, last, today)
+            if pending_cutoff is None:
+                continue  # kesim gunu bilinmiyor, donem hesaplanamaz
 
             carry = (
                 float(last.total_debt) - float(last.amount_paid or 0)
                 if last else 0.0
             )
-            day = card.statement_day or (last.cutoff_date.day if last and last.cutoff_date else today.day)
+            logged = logged_map.get((card.id, pending_cutoff), 0.0)
             rows.append({
                 'id': None,
                 'virtual': True,
@@ -209,10 +222,12 @@ class DebtsModelViewSet(ModelViewSet):
                 'is_closed': False,
                 'carry_over': carry,
                 'new_spending': None,
-                'remaining': carry,
-                'suggested_cutoff_date': date(
-                    today.year, today.month, min(day, days_in_month)
-                ).isoformat(),
+                'remaining': carry + logged,
+                'logged_spending': logged,
+                'spending_diff': None,
+                # Ekstre gelmeden once beklenen toplam: devir + kayitli harcama.
+                'expected_total': carry + logged,
+                'suggested_cutoff_date': pending_cutoff.isoformat(),
                 'suggested_min_payment_coeff': (
                     str(last.min_payment_coeff) if last else None
                 ),
@@ -389,6 +404,27 @@ class DashboardSummaryView(APIView):
                 'expected': float(row['expected'] or 0),
                 'actual': float(row['actual'] or 0),
             }
+
+        # Kartla yapilan gider, harcandigi ay nakit cikisi degildir; para kart
+        # odemesi yapilirken cikar. Net bakiyede cift sayilmamasi icin ayriliyor.
+        expense_totals = expenses_qs.aggregate(
+            total=Coalesce(
+                Sum(Coalesce('actual_amount', 'expected_amount')),
+                Value(0, output_field=DecimalField()),
+            ),
+            card_total=Coalesce(
+                Sum(
+                    Coalesce('actual_amount', 'expected_amount'),
+                    filter=db_models.Q(payment_method=Expense.PaymentMethod.CREDIT),
+                ),
+                Value(0, output_field=DecimalField()),
+            ),
+        )
+        expenses_summary = {
+            'total': float(expense_totals['total']),
+            'card': float(expense_totals['card_total']),
+            'cash': float(expense_totals['total']) - float(expense_totals['card_total']),
+        }
 
         # --- Debts Summary ---
         debts_qs = Debts.objects.filter(user=user)
@@ -577,6 +613,7 @@ class DashboardSummaryView(APIView):
 
         return Response({
             'expenses_by_category': expenses_by_category,
+            'expenses_summary': expenses_summary,
             'debts_summary': debts_summary,
             'debts_by_bank': debts_by_bank,
             'credits_summary': credits_summary,
