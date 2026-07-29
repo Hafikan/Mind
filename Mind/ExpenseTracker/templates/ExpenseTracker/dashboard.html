@@ -16,6 +16,16 @@
         margin-top: 2px;
     }
 
+    /* Henuz kesilmemis ekstreye biriken tutar: kesin degil, tahmin. */
+    .summary-accrual {
+        color: #f97316;
+    }
+
+    /* .summary-card'in display:flex'i tarayicinin [hidden] kuralini ezer. */
+    .summary-card[hidden] {
+        display: none;
+    }
+
     .chart-card {
         background: var(--bg-secondary);
         border: 1px solid var(--border-color);
@@ -155,6 +165,23 @@
             <span class="summary-label">Kalan Kart Borcu</span>
             <span class="summary-value text-danger" id="totalDebt">₺0</span>
             <span class="summary-sub text-muted" id="totalDebtSub"></span>
+            <span class="summary-sub summary-accrual" id="totalDebtAccrual" hidden></span>
+        </div>
+    </div>
+    <!-- Ekstresi henuz girilmemis donem: gider olarak kaydedilmis kart
+         harcamalari burada birikir, ekstre girilince bu kart kaybolur. -->
+    <div class="summary-card" id="pendingStatementCard" hidden>
+        <div class="summary-icon" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05)); color: #f97316;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="9"></circle>
+                <polyline points="12 7 12 12 15.5 14"></polyline>
+            </svg>
+        </div>
+        <div class="summary-content">
+            <span class="summary-label">Birikmekte Olan Ekstre</span>
+            <span class="summary-value" id="pendingTotal" style="color: #f97316;">₺0</span>
+            <span class="summary-sub text-muted" id="pendingSub"></span>
+            <span class="summary-sub text-muted" id="pendingPeriods"></span>
         </div>
     </div>
     <div class="summary-card">
@@ -272,6 +299,14 @@ const now = new Date();
 monthFilter.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
 const fmt = (v) => `₺${Number(v || 0).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+const PERIOD_FMT = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' });
+// ISO tarihi yerel gune cevirir; `new Date('2026-08-10')` UTC okundugu icin
+// negatif saat diliminde bir gun geri kayardi.
+const parseDate = (iso) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+};
 
 // Chart defaults
 Chart.defaults.color = '#a0a0a0';
@@ -675,6 +710,50 @@ function renderCreditsByBank(data) {
     }).join('');
 }
 
+/**
+ * Ekstresi henuz girilmemis donemler. Tutarlar giderlerden turetilen tahmindir;
+ * banka faiz/aidat ekleyebilecegi ve her harcama kaydedilmeyebilecegi icin
+ * kesin borctan ayri, turuncu ile gosteriliyor. Secili ayda kesilecek bir
+ * ekstre yoksa kart tamamen gizlenir.
+ */
+function renderPendingStatements(pending) {
+    const card = document.getElementById('pendingStatementCard');
+    if (!pending || !pending.count) {
+        card.hidden = true;
+        return;
+    }
+
+    card.hidden = false;
+    document.getElementById('pendingTotal').textContent = fmt(pending.expected_total);
+    document.getElementById('pendingSub').textContent =
+        fmt(pending.logged_spending) + ' yeni harcama + ' + fmt(pending.carry_over) + ' devir';
+    document.getElementById('pendingPeriods').textContent = pending.items
+        .map(item => `${item.bank} · ${PERIOD_FMT.format(parseDate(item.cutoff_date))}`)
+        .join(' — ');
+}
+
+/**
+ * "Kalan Kart Borcu"nun altina: secili ayda yapilan kart harcamasi bu ayin
+ * borcuna eklenmez, hangi ekstreye yazilacaksa orada cikar. Kullanici temmuza
+ * bakarken temmuz harcamasinin agustos ekstresine gittigini burada gorur.
+ */
+function renderCardSpendingTargets(targets) {
+    const line = document.getElementById('totalDebtAccrual');
+    if (!targets || !targets.length) {
+        line.hidden = true;
+        return;
+    }
+
+    const total = targets.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const periods = [...new Set(targets.map(t => t.cutoff_date))].sort();
+    const label = periods.length === 1
+        ? PERIOD_FMT.format(parseDate(periods[0])) + ' ekstresine'
+        : periods.length + ' ekstreye';
+
+    line.hidden = false;
+    line.textContent = `+${fmt(total)} bu ayın kart harcaması → ${label} yazılacak`;
+}
+
 async function loadDashboard() {
     const [year, month] = monthFilter.value.split('-');
     try {
@@ -700,6 +779,12 @@ async function loadDashboard() {
         document.getElementById('totalDebt').textContent = fmt(ds.remaining);
         document.getElementById('totalDebtSub').textContent =
             'Bu ay kart harcaması ' + fmt(ds.new_spending);
+
+        // Ekstresi girilmemis donemler: kart gideri harcandigi ayda degil,
+        // yazildigi ekstrede gorunur. Ekstre girilene kadar tek kaynagi
+        // giderlerdir, o yuzden tahmin olarak ayri gosteriliyor.
+        renderPendingStatements(data.pending_statements);
+        renderCardSpendingTargets(data.card_spending_targets);
 
         document.getElementById('totalDebtPaid').textContent = fmt(ds.total_paid);
         // Ekstre toplaminin yuzde kaci kapatilmis: devirle birlikte toplam borcun payi.

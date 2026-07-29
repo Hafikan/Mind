@@ -615,8 +615,10 @@ document.addEventListener('DOMContentLoaded', function () {
             ? real.length + ' dönem kayıtlı'
             : 'Henüz ekstre girilmemiş';
 
-        // Basliktaki "Ekstre Gir", secili kartin bu donemine baglidir.
-        const pending = state.statements.find(s => s.virtual);
+        // Basliktaki "Ekstre Gir", secili kartin bu donemine baglidir. Ileri
+        // tarihli giderlerden dogan sonraki donemler de sanal satir alir ama
+        // sirasi gelmeden girilemez.
+        const pending = state.statements.find(s => s.virtual && s.is_pending);
         addStatementBtn.disabled = !pending;
         addStatementLabel.textContent = pending
             ? card.name + ' — Ekstre Gir'
@@ -628,18 +630,20 @@ document.addEventListener('DOMContentLoaded', function () {
         statementsBody.innerHTML = state.statements.map(s => {
             if (s.virtual) {
                 const logged = Number(s.logged_spending || 0);
+                const tag = s.is_pending ? 'bekliyor' : 'sonraki dönem';
+                const action = s.is_pending
+                    ? '<button class="btn btn-outline btn-sm enter-statement-btn" type="button">Ekstreyi gir</button>'
+                    : '<span class="muted-cell">–</span>';
                 return `
                 <tr class="statement-row-virtual">
-                    <td class="period-cell">${escapeHtml(periodLabel(s.suggested_cutoff_date))} <span class="pending-tag">bekliyor</span></td>
+                    <td class="period-cell">${escapeHtml(periodLabel(s.suggested_cutoff_date))} <span class="pending-tag">${tag}</span></td>
                     <td class="carry-cell">${escapeHtml(fmt(s.carry_over))}</td>
                     <td class="new-cell">${logged ? escapeHtml(fmt(logged)) : '–'}</td>
                     <td class="estimate-cell">${logged ? escapeHtml(fmt(s.expected_total)) + ' <span class="estimate-tag">tahmin</span>' : '–'}</td>
                     <td class="muted-cell">–</td>
                     <td class="muted-cell">–</td>
                     <td class="remaining-cell">${escapeHtml(fmt(s.remaining))}</td>
-                    <td>
-                        <button class="btn btn-outline btn-sm enter-statement-btn" type="button">Ekstreyi gir</button>
-                    </td>
+                    <td>${action}</td>
                 </tr>`;
             }
             return `
@@ -764,7 +768,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     statementsBody.addEventListener('click', async function (event) {
         if (event.target.closest('.enter-statement-btn')) {
-            openModal(state.statements.find(s => s.virtual));
+            openModal(state.statements.find(s => s.virtual && s.is_pending));
             return;
         }
 
@@ -793,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     addStatementBtn.addEventListener('click', function () {
-        const pending = state.statements.find(s => s.virtual);
+        const pending = state.statements.find(s => s.virtual && s.is_pending);
         if (pending) openModal(pending);
     });
 

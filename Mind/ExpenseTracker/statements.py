@@ -9,7 +9,7 @@ donemler arasindaki iliskiyi tek yerde toplar:
 """
 
 import calendar
-from datetime import date, timedelta
+from datetime import date
 
 
 # --- Devir zinciri -----------------------------------------------------------
@@ -74,17 +74,19 @@ def next_month(year, month):
 def statement_cutoff_for(spend_date, statement_day):
     """Bir kart harcamasinin dusecegi ekstrenin kesim tarihi.
 
-    Harcama, kendisinden sonraki ilk kesime yazilir. Kesim tarihi gecmisse
-    harcama o donemin ekstresine giremez, bir sonrakine devreder:
+    Takvim ayi kurali: bir ayda yapilan harcamalarin tamami, *bir sonraki* ayda
+    kesilen ekstreye yazilir. Harcamanin gunu kesim gununden once mi sonra mi
+    diye bakilmaz, ay yeter:
 
-        kesim gunu 6, harcama 03.07 -> 06.07 ekstresi
+        kesim gunu 6, harcama 03.07 -> 06.08 ekstresi
         kesim gunu 6, harcama 28.07 -> 06.08 ekstresi
+
+    (Bankalarin gercek davranisi bundan farklidir: kesimden onceki harcama ayni
+    ayin ekstresine girer. Takip kolayligi icin bilincli olarak takvim ayi
+    kurali secildi; bir ayin harcamasi hep bir sonraki ekstrede aranir.)
     """
     if statement_day is None:
         return None
-    same_period = cutoff_on(spend_date.year, spend_date.month, statement_day)
-    if spend_date <= same_period:
-        return same_period
     return cutoff_on(*next_month(spend_date.year, spend_date.month), statement_day)
 
 
@@ -101,10 +103,11 @@ def pending_cutoff_for(card, latest_statement, today):
     statement_day = effective_statement_day(card, latest_statement) or today.day
 
     if latest_statement and latest_statement.cutoff_date:
-        # Son ekstreden bir gun sonrasi hangi doneme duserse, bekleyen odur.
-        return statement_cutoff_for(
-            latest_statement.cutoff_date + timedelta(days=1), statement_day
-        )
+        # Son ekstreden sonraki kesim. Harcama atamasindan bagimsiz hesaplanir:
+        # bekleyen donem her zaman bir sonraki aydir, o doneme harcama birikmis
+        # olmasa bile.
+        last = latest_statement.cutoff_date
+        return cutoff_on(*next_month(last.year, last.month), statement_day)
 
     # Gecmis yok: elindeki ekstre, en son kesilmis olandir.
     this_period = cutoff_on(today.year, today.month, statement_day)
@@ -152,12 +155,15 @@ def build_statement_day_map(user, bank_ids):
 
 # --- Kayitli kart harcamasi --------------------------------------------------
 
-def build_logged_spending_map(user, bank_ids, statement_days=None):
+def build_logged_spending_map(user, bank_ids, statement_days=None, expenses=None):
     """{(bank_id, kesim_tarihi): giderlere islenmis kart harcamasi toplami}
 
     Tutar olarak gerceklesen, yoksa beklenen tutar sayilir. Donem atamasi
-    `statement_cutoff_for` ile yapilir, yani kesim sonrasi harcamalar bir
-    sonraki ekstreye yazilir.
+    `statement_cutoff_for` ile yapilir: bir ayin harcamasi bir sonraki ayin
+    ekstresine yazilir.
+
+    `expenses` verilirse o queryset esas alinir (ornegin yalnizca secili ayda
+    yapilan harcamalar); verilmezse kullanicinin tum kart giderleri sayilir.
     """
     from .models import Expense
 
@@ -165,10 +171,12 @@ def build_logged_spending_map(user, bank_ids, statement_days=None):
         return {}
     if statement_days is None:
         statement_days = build_statement_day_map(user, bank_ids)
+    if expenses is None:
+        expenses = Expense.objects.filter(user=user)
 
     totals = {}
-    expenses = Expense.objects.filter(
-        user=user, card_id__in=bank_ids, payment_method=Expense.PaymentMethod.CREDIT
+    expenses = expenses.filter(
+        card_id__in=bank_ids, payment_method=Expense.PaymentMethod.CREDIT
     ).values('card_id', 'pay_day', 'expected_amount', 'actual_amount')
 
     for expense in expenses:
@@ -182,3 +190,60 @@ def build_logged_spending_map(user, bank_ids, statement_days=None):
         key = (expense['card_id'], cutoff)
         totals[key] = totals.get(key, 0.0) + float(amount or 0)
     return totals
+
+
+# --- Birikmekte olan (girilmemis) ekstreler ----------------------------------
+
+def accruing_statements(user, cards, today, latest=None, statement_days=None,
+                        logged=None):
+    """Henuz girilmemis ekstreler: bekleyen donem ve ondan sonraki donemler.
+
+    Bekleyen donem her kart icin her zaman listelenir (kullanici ekstresini
+    girebilsin diye). Sonraki donemler ancak giderlerden oraya bir harcama
+    birikmisse listeye girer; ileri tarihli bir kart gideri boylece kaybolmaz.
+
+    Devir zinciri kayitli ekstrelerin ucundan devam eder: girilmemis bir donem
+    odenmemis sayilir, beklenen toplami bir sonrakine devir olarak gecer.
+    Donem basina sozluk doner, kesim tarihine gore artan sirali.
+    """
+    cards = list(cards)
+    bank_ids = [c.id for c in cards]
+    if latest is None:
+        latest = latest_statement_per_card(user, bank_ids)
+    if statement_days is None:
+        statement_days = build_statement_day_map(user, bank_ids)
+    if logged is None:
+        logged = build_logged_spending_map(user, bank_ids, statement_days)
+
+    rows = []
+    for card in cards:
+        last = latest.get(card.id)
+        pending = pending_cutoff_for(card, last, today)
+        if pending is None:
+            continue  # kesim gunu bilinmiyor, donem hesaplanamaz
+
+        periods = {pending}
+        periods.update(
+            cutoff for (bank_id, cutoff) in logged
+            if bank_id == card.id and cutoff >= pending
+        )
+
+        carry = (
+            float(last.total_debt) - float(last.amount_paid or 0) if last else 0.0
+        )
+        for cutoff in sorted(periods):
+            spending = logged.get((card.id, cutoff), 0.0)
+            rows.append({
+                'bank_id': card.id,
+                'bank_name': card.name,
+                'cutoff_date': cutoff,
+                'is_pending': cutoff == pending,
+                'carry_over': carry,
+                'logged_spending': spending,
+                'expected_total': carry + spending,
+                'min_payment_coeff': (
+                    str(last.min_payment_coeff) if last else None
+                ),
+            })
+            carry += spending
+    return rows

@@ -6,6 +6,7 @@ from .serializers import CreditsSerializer
 from .serializers import IncomeSerializer
 from .serializers import ShoppingSerializer
 from .statements import (
+    accruing_statements,
     build_carry_map,
     build_logged_spending_map,
     build_statement_day_map,
@@ -179,59 +180,50 @@ class DebtsModelViewSet(ModelViewSet):
         return Response(data)
 
     def _virtual_rows(self, request):
-        """Henuz girilmemis (birikmekte olan) ekstre icin sanal satirlar.
+        """Henuz girilmemis (birikmekte olan) ekstreler icin sanal satirlar.
 
-        Donem, son ekstreden *sonraki* kesimdir: temmuz ekstresi girilmisse
-        temmuz sonunda yapilan bir kart harcamasi agustos ekstresine birikir.
-        Kaydedilene kadar veritabaninda karsiligi yoktur.
+        Ilk donem, son ekstreden *sonraki* kesimdir: temmuz ekstresi girilmisse
+        temmuzda yapilan bir kart harcamasi agustos ekstresine birikir. Ileri
+        tarihli giderler daha sonraki donemlere de dusebilir; onlar da satir
+        alir ki harcama hicbir yerde gorunmeden kaybolmasin. Kaydedilene kadar
+        hicbirinin veritabaninda karsiligi yoktur.
         """
         cards = Banks.objects.filter(user=request.user)
         bank_id = request.query_params.get('bank_id')
         if bank_id:
             cards = cards.filter(id=bank_id)
         cards = list(cards.order_by('name'))
-        bank_ids = [c.id for c in cards]
-
-        latest = latest_statement_per_card(request.user, bank_ids)
-        statement_days = build_statement_day_map(request.user, bank_ids)
-        logged_map = build_logged_spending_map(request.user, bank_ids, statement_days)
-        today = date.today()
 
         rows = []
-        for card in cards:
-            last = latest.get(card.id)
-            pending_cutoff = pending_cutoff_for(card, last, today)
-            if pending_cutoff is None:
-                continue  # kesim gunu bilinmiyor, donem hesaplanamaz
-
-            carry = (
-                float(last.total_debt) - float(last.amount_paid or 0)
-                if last else 0.0
-            )
-            logged = logged_map.get((card.id, pending_cutoff), 0.0)
+        for period in accruing_statements(request.user, cards, date.today()):
             rows.append({
                 'id': None,
                 'virtual': True,
-                'bank': card.id,
-                'bank_name': card.name,
+                # Yalnizca bu satirin ekstresi girilebilir; sonraki donemler
+                # sirasi gelmeden kaydedilirse devir zinciri bozulur.
+                'is_pending': period['is_pending'],
+                'bank': period['bank_id'],
+                'bank_name': period['bank_name'],
                 'cutoff_date': None,
                 'total_debt': None,
                 'amount_paid': None,
                 'min_payment_coeff': None,
                 'min_payment': None,
                 'is_closed': False,
-                'carry_over': carry,
+                'carry_over': period['carry_over'],
                 'new_spending': None,
-                'remaining': carry + logged,
-                'logged_spending': logged,
+                'remaining': period['expected_total'],
+                'logged_spending': period['logged_spending'],
                 'spending_diff': None,
                 # Ekstre gelmeden once beklenen toplam: devir + kayitli harcama.
-                'expected_total': carry + logged,
-                'suggested_cutoff_date': pending_cutoff.isoformat(),
-                'suggested_min_payment_coeff': (
-                    str(last.min_payment_coeff) if last else None
-                ),
+                'expected_total': period['expected_total'],
+                'suggested_cutoff_date': period['cutoff_date'].isoformat(),
+                'suggested_min_payment_coeff': period['min_payment_coeff'],
             })
+        # Kart bazinda gruplu, her kartin icinde yeniden eskiye: kayitli
+        # ekstreler de bu sirayla listeleniyor. (Iki adim, sort kararli.)
+        rows.sort(key=lambda row: row['suggested_cutoff_date'], reverse=True)
+        rows.sort(key=lambda row: row['bank_name'])
         return rows
 
 @login_required
@@ -459,6 +451,60 @@ class DashboardSummaryView(APIView):
             'new_spending': sum(new_spending_of(s) for s in selected_statements),
         }
 
+        # --- Birikmekte olan ekstreler ---
+        # Kart gideri harcandigi ay degil, yazildigi ekstrede gorunur; ekstre
+        # daha girilmedigi icin `Debts` tablosunda karsiligi yok. Secili ayda
+        # kesilecek ekstrelere biriken tutar buradan geliyor.
+        cards = list(Banks.objects.filter(user=user).order_by('name'))
+        accruing = [
+            period for period in accruing_statements(user, cards, date.today())
+            # Ne devri ne harcamasi olan donem panelde bir sey anlatmiyor;
+            # gecmisi olmayan kartlarin "ilk ekstreni gir" satiri boyle.
+            if period['expected_total'] or period['logged_spending']
+        ]
+        if month and year:
+            accruing = [
+                period for period in accruing
+                if period['cutoff_date'].month == int(month)
+                and period['cutoff_date'].year == int(year)
+            ]
+        # Secili ayda yapilan kart harcamalari hangi ekstreye yaziliyor?
+        # Panelde temmuza bakan biri, temmuz harcamasinin agustos ekstresinde
+        # cikacagini buradan gorur.
+        bank_ids = [card.id for card in cards]
+        spending_targets = build_logged_spending_map(
+            user, bank_ids, build_statement_day_map(user, bank_ids),
+            expenses=expenses_qs,
+        )
+        card_names = {card.id: card.name for card in cards}
+        card_spending_targets = [
+            {
+                'bank': card_names[bank_id],
+                'cutoff_date': cutoff.isoformat(),
+                'amount': amount,
+            }
+            for (bank_id, cutoff), amount in sorted(
+                spending_targets.items(), key=lambda item: (item[0][1], item[0][0])
+            )
+        ]
+
+        pending_statements = {
+            'count': len(accruing),
+            'carry_over': sum(p['carry_over'] for p in accruing),
+            'logged_spending': sum(p['logged_spending'] for p in accruing),
+            'expected_total': sum(p['expected_total'] for p in accruing),
+            'items': [
+                {
+                    'bank': p['bank_name'],
+                    'cutoff_date': p['cutoff_date'].isoformat(),
+                    'carry_over': p['carry_over'],
+                    'logged_spending': p['logged_spending'],
+                    'expected_total': p['expected_total'],
+                }
+                for p in accruing
+            ],
+        }
+
         # --- Debts by Bank (total_debt, amount_paid per bank) ---
         debts_by_bank_data = (
             debts_qs
@@ -615,6 +661,8 @@ class DashboardSummaryView(APIView):
             'expenses_by_category': expenses_by_category,
             'expenses_summary': expenses_summary,
             'debts_summary': debts_summary,
+            'pending_statements': pending_statements,
+            'card_spending_targets': card_spending_targets,
             'debts_by_bank': debts_by_bank,
             'credits_summary': credits_summary,
             'credits_by_bank': credits_by_bank,

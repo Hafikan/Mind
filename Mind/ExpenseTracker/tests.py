@@ -12,22 +12,33 @@ AppUser = get_user_model()
 
 
 class StatementPeriodTestCase(TestCase):
-    """Bir kart harcamasinin hangi ekstreye dustugu."""
+    """Bir kart harcamasinin hangi ekstreye dustugu.
 
-    def test_spend_before_cutoff_lands_on_this_period(self):
+    Takvim ayi kurali: ayin neresinde yapildigina bakilmaksizin, bir ayin
+    harcamasi bir sonraki ayin kesiminde kesilen ekstreye yazilir.
+    """
+
+    def test_spend_before_cutoff_still_rolls_to_next_month(self):
         self.assertEqual(
-            statement_cutoff_for(date(2026, 7, 3), 6), date(2026, 7, 6)
+            statement_cutoff_for(date(2026, 7, 3), 6), date(2026, 8, 6)
         )
 
-    def test_spend_on_cutoff_day_lands_on_this_period(self):
+    def test_spend_on_cutoff_day_rolls_to_next_month(self):
         self.assertEqual(
-            statement_cutoff_for(date(2026, 7, 6), 6), date(2026, 7, 6)
+            statement_cutoff_for(date(2026, 7, 6), 6), date(2026, 8, 6)
         )
 
-    def test_spend_after_cutoff_rolls_to_next_period(self):
-        """Senaryonun cekirdegi: kesim gectikten sonraki harcama devreder."""
+    def test_spend_after_cutoff_rolls_to_next_month(self):
+        """Senaryonun cekirdegi: temmuzdaki harcama agustos ekstresine yazilir."""
         self.assertEqual(
             statement_cutoff_for(date(2026, 7, 28), 6), date(2026, 8, 6)
+        )
+
+    def test_whole_month_lands_on_the_same_statement(self):
+        """Ayin basi ve sonu ayni ekstreye dusmeli."""
+        self.assertEqual(
+            statement_cutoff_for(date(2026, 7, 1), 10),
+            statement_cutoff_for(date(2026, 7, 31), 10),
         )
 
     def test_rolling_over_a_year_boundary(self):
@@ -38,11 +49,10 @@ class StatementPeriodTestCase(TestCase):
     def test_cutoff_day_is_clamped_to_short_months(self):
         # Kesim gunu 31 olan kart, subatta ayin son gununde keser.
         self.assertEqual(
-            statement_cutoff_for(date(2026, 2, 10), 31), date(2026, 2, 28)
+            statement_cutoff_for(date(2026, 1, 10), 31), date(2026, 2, 28)
         )
-        # 28 subat gecildikten sonra mart kesimine devreder.
         self.assertEqual(
-            statement_cutoff_for(date(2026, 1, 31), 31), date(2026, 1, 31)
+            statement_cutoff_for(date(2026, 2, 10), 31), date(2026, 3, 31)
         )
 
     def test_unknown_statement_day_yields_no_period(self):
@@ -117,9 +127,10 @@ class CreditCardExpenseTestCase(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["target_cutoff_date"], "2026-08-06")
 
-    def test_expense_before_cutoff_targets_current_statement(self):
+    def test_expense_before_cutoff_also_targets_next_statement(self):
+        """Takvim ayi kurali: kesim gununden onceki harcama da agustosa yazilir."""
         response = self._post_expense(pay_day="2026-07-03")
-        self.assertEqual(response.json()["target_cutoff_date"], "2026-07-06")
+        self.assertEqual(response.json()["target_cutoff_date"], "2026-08-06")
 
     def test_statement_day_falls_back_to_last_statement(self):
         """Kartta kesim gunu yoksa son ekstrenin gununden turetilir."""
@@ -151,6 +162,33 @@ class CreditCardExpenseTestCase(TestCase):
         self.assertEqual(pending["carry_over"], 38000.0)
         self.assertEqual(pending["logged_spending"], 4250.0)
         self.assertEqual(pending["expected_total"], 42250.0)
+
+    def test_later_period_gets_its_own_accruing_row(self):
+        """Bekleyen donemden sonraki doneme dusen gider gorunmeden kaybolmamali."""
+        Debts.objects.create(
+            user=self.user, bank=self.card, total_debt=50000, min_payment_coeff="0.02",
+            amount_paid=12000, cutoff_date=date(2026, 7, 6),
+        )
+        self._post_expense(pay_day="2026-07-20", actual_amount="1000.00")
+        self._post_expense(pay_day="2026-08-20", actual_amount="2000.00")
+
+        rows = self.client.get(
+            f"/tracker/api/debts/?bank_id={self.card.id}&with_virtual=1"
+        ).json()
+        virtual = [row for row in rows if row.get("virtual")]
+
+        # Yeniden eskiye: once eylul, sonra bekleyen agustos.
+        self.assertEqual(
+            [row["suggested_cutoff_date"] for row in virtual],
+            ["2026-09-06", "2026-08-06"],
+        )
+        september, august = virtual
+        self.assertTrue(august["is_pending"])
+        self.assertFalse(september["is_pending"])
+        self.assertEqual(august["expected_total"], 39000.0)  # 38.000 devir + 1.000
+        # Girilmemis donem odenmemis sayilir; beklenen toplam devir olarak gecer.
+        self.assertEqual(september["carry_over"], 39000.0)
+        self.assertEqual(september["expected_total"], 41000.0)
 
     def test_expected_amount_is_used_when_actual_is_missing(self):
         Debts.objects.create(
@@ -507,6 +545,75 @@ class CardStatementTestCase(TestCase):
         Banks.objects.create(user=other, name="Baskasinin Karti", logo="bank_logo/z.png")
         names = [c["name"] for c in self.client.get("/tracker/api/banks/summary/").json()]
         self.assertNotIn("Baskasinin Karti", names)
+
+
+class PendingStatementDashboardTestCase(TestCase):
+    """Gosterge panelinde birikmekte olan (henuz girilmemis) ekstre."""
+
+    def setUp(self):
+        self.user = AppUser.objects.create_user(username="ali", password="parola123")
+        self.card = Banks.objects.create(
+            user=self.user, name="Ziraat Bank", logo="bank_logo/x.png",
+            statement_day=6,
+        )
+        self.category = ExpenseCategory.objects.create(user=self.user, name="Market")
+        self.client.force_login(self.user)
+
+        Debts.objects.create(
+            user=self.user, bank=self.card, total_debt=50000, min_payment_coeff="0.02",
+            amount_paid=12000, cutoff_date=date(2026, 7, 6),
+        )
+        Expense.objects.create(
+            user=self.user, description="Konser", expected_amount=3000,
+            actual_amount=4250, category=self.category, pay_day=date(2026, 7, 20),
+            payment_method="credit", card=self.card,
+        )
+
+    def _pending(self, month):
+        return self.client.get(
+            f"/tracker/api/dashboard/?year=2026&month={month}"
+        ).json()["pending_statements"]
+
+    def test_july_spending_shows_up_under_the_august_statement(self):
+        august = self._pending(8)
+
+        self.assertEqual(august["count"], 1)
+        self.assertEqual(august["logged_spending"], 4250.0)
+        self.assertEqual(august["carry_over"], 38000.0)
+        self.assertEqual(august["expected_total"], 42250.0)
+        self.assertEqual(august["items"][0]["bank"], "Ziraat Bank")
+        self.assertEqual(august["items"][0]["cutoff_date"], "2026-08-06")
+
+    def test_month_with_a_recorded_statement_has_nothing_pending(self):
+        """Temmuzun ekstresi girilmis; o ayda birikmekte olan bir donem yok."""
+        self.assertEqual(self._pending(7)["count"], 0)
+        self.assertEqual(self._pending(7)["expected_total"], 0)
+
+    def test_july_view_says_where_the_card_spending_will_land(self):
+        targets = self.client.get(
+            "/tracker/api/dashboard/?year=2026&month=7"
+        ).json()["card_spending_targets"]
+
+        self.assertEqual(targets, [{
+            "bank": "Ziraat Bank",
+            "cutoff_date": "2026-08-06",
+            "amount": 4250.0,
+        }])
+
+    def test_spending_targets_only_cover_the_selected_month(self):
+        self.assertEqual(
+            self.client.get(
+                "/tracker/api/dashboard/?year=2026&month=6"
+            ).json()["card_spending_targets"],
+            [],
+        )
+
+    def test_card_expense_is_not_counted_as_debt_in_the_month_it_was_made(self):
+        """Kart gideri temmuz borcunu artirmaz, agustos ekstresine birikir."""
+        july = self.client.get("/tracker/api/dashboard/?year=2026&month=7").json()
+        self.assertEqual(july["debts_summary"]["remaining"], 38000.0)
+        self.assertEqual(july["expenses_summary"]["card"], 4250.0)
+        self.assertEqual(july["expenses_summary"]["cash"], 0.0)
 
 
 class DashboardRegressionTestCase(TestCase):
