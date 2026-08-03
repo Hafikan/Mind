@@ -1,32 +1,47 @@
+# Gelistirme yigini: runserver + kaynak dizini bagli, kod degisince yeniden yukler.
+# Sunucuda bunu degil compose.prod.yml'i kullan:
+#   docker compose -f compose.prod.yml up -d
+name: mind
+
 services:
   postgresql-database:
-
-    image: postgres
+    # Sabit surum: `postgres` etiketi yarin bir sonraki ana surume kayarsa
+    # eski veri dizini uzerinde acilmaz.
+    image: postgres:18
     restart: always
     ports:
-      - "5432:5432"
+      # Yalniz loopback: testler host'tan baglanabilsin diye acik, ama
+      # makinenin disina sizmiyor.
+      - "127.0.0.1:5432:5432"
     volumes:
       - psql_volume:/var/lib/postgresql
     environment:
       POSTGRES_DB: "mind-db"
       POSTGRES_USER: "cerberus"
       POSTGRES_PASSWORD: "cerberus"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cerberus -d mind-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api-provider:
     build: .
-    ports: 
+    ports:
       - "9000:8080"
     command: ["python3","manage.py","runserver","0.0.0.0:8080"]
     volumes:
       - ./Mind:/code
     healthcheck:
-      test: ["CMD","curl","--fail","http://127.0.0.1:8080"]
+      # Imajda curl yok; kontrolu Python'un kendi istemcisiyle yapiyoruz.
+      test: ["CMD","python3","-c","import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/')"]
       interval: 30s
       timeout: 30s
       retries: 3
       start_period: 15s
     depends_on:
-      - postgresql-database
+      postgresql-database:
+        condition: service_healthy
 
 volumes:
   psql_volume:

@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 Mind/staticfiles/
 Mind/db.sqlite3
+.env
+*.dump

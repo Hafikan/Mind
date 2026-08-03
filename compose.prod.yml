@@ -1,0 +1,68 @@
+# Uretim yigini. Kullanim:
+#   cp .env.example .env && $EDITOR .env
+#   docker compose -f compose.prod.yml up -d --build
+#
+# Gelistirme dosyasinin ustune bindirilmez, onun yerine gecer: `-f` verildigi
+# an docker-compose.yml hic okunmaz. Volume adlari `name: mind` sayesinde iki
+# dosyada da ayni, yani ayni veritabani volume'unu gorurler.
+name: mind
+
+services:
+  postgresql-database:
+    image: postgres:18
+    restart: always
+    # Yayimlanmis port yok: veritabanina yalnizca compose agindaki
+    # servisler, servis adiyla erisir.
+    volumes:
+      - psql_volume:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-mind-db}"
+      POSTGRES_USER: "${POSTGRES_USER:-cerberus}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?.env icinde POSTGRES_PASSWORD tanimlanmali}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cerberus} -d ${POSTGRES_DB:-mind-db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-provider:
+    build: .
+    restart: always
+    # Kaynak dizini baglanmaz: calisan kod imajin icindekidir, `git pull`
+    # sonrasi `--build` ile yenilenir.
+    command: >
+      sh -c "python3 manage.py migrate --noinput &&
+             python3 manage.py collectstatic --noinput &&
+             gunicorn Mind.wsgi:application --bind 0.0.0.0:8080 --workers 3 --access-logfile -"
+    env_file:
+      - .env
+    volumes:
+      # Yuklenen dosyalar host'ta kalir: yedeklemesi ve `git` ile tasinmasi kolay.
+      - ./Mind/media:/code/media
+      # collectstatic ciktisi; nginx ayni volume'u salt okunur baglar.
+      - static_volume:/code/staticfiles
+    healthcheck:
+      test: ["CMD","python3","-c","import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/')"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgresql-database:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: always
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/srv/static:ro
+      - ./Mind/media:/srv/media:ro
+    depends_on:
+      - api-provider
+
+volumes:
+  psql_volume:
+  static_volume:

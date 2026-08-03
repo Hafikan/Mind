@@ -10,22 +10,50 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+def env_flag(name, default):
+    """Ortam degiskenini bayrak olarak oku; tanimsizsa `default`."""
+    return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7s3phjir9f5im-2hqsr3suk58vw4h^p@-o47a+&eojj80u-)k2'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+def env_list(name):
+    """Virgulle ayrilmis ortam degiskenini listeye cevir; bos ogeleri atar."""
+    return [item.strip() for item in os.environ.get(name, '').split(',') if item.strip()]
 
-ALLOWED_HOSTS = []
+
+# Gelistirme anahtari depoda oldugu icin gizli degil; uretimde
+# DJANGO_SECRET_KEY zorunlu (asagidaki kontrole bak).
+DEV_SECRET_KEY = 'django-insecure-7s3phjir9f5im-2hqsr3suk58vw4h^p@-o47a+&eojj80u-)k2'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', DEV_SECRET_KEY)
+
+DEBUG = env_flag('DJANGO_DEBUG', True)
+
+ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS')
+
+# Uretimde eksik ayarla sessizce guvensiz calismaktansa aciliste durmak
+# yeglenir; asagidaki iki hata da ilk istegi degil, konteyneri dusurur.
+if not DEBUG:
+    if SECRET_KEY == DEV_SECRET_KEY:
+        raise ImproperlyConfigured(
+            'DJANGO_DEBUG kapaliyken DJANGO_SECRET_KEY tanimlanmali. '
+            'Depodaki gelistirme anahtari herkese acik oldugu icin '
+            'oturum ve parola sifirlama jetonlari taklit edilebilir. '
+            'Uret: python -c "from django.core.management.utils import '
+            'get_random_secret_key as k; print(k())"'
+        )
+    if not ALLOWED_HOSTS:
+        raise ImproperlyConfigured(
+            'DJANGO_DEBUG kapaliyken DJANGO_ALLOWED_HOSTS tanimlanmali '
+            '(orn. "mind.ornek.com,192.0.2.10").'
+        )
 
 AUTH_USER_MODEL="Accounts.AppUser"
 # Application definition
@@ -89,11 +117,13 @@ WSGI_APPLICATION = 'Mind.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': "mind-db",
-        'USER': "cerberus",
-        'PASSWORD': "cerberus",
-        'HOST': "postgresql-database",
-        'PORT': 5432
+        'NAME': os.environ.get('POSTGRES_DB', 'mind-db'),
+        'USER': os.environ.get('POSTGRES_USER', 'cerberus'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'cerberus'),
+        # Varsayilan, compose agindaki servis adi; host makineden calisirken
+        # POSTGRES_HOST=127.0.0.1 vermek yeterli.
+        'HOST': os.environ.get('POSTGRES_HOST', 'postgresql-database'),
+        'PORT': int(os.environ.get('POSTGRES_PORT', '5432')),
     }
 }
 
@@ -144,3 +174,26 @@ MEDIA_URL = '/media/'
 # Authentication
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'accounts:index'
+
+
+# Uretim sertlestirmesi
+# https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+
+if not DEBUG:
+    # nginx `X-Forwarded-Proto`yu kendisi yaziyor; Django istegin disaridan
+    # https ile geldigini ancak boyle bilebilir.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS')
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+
+    # TLS acilana kadar kapali kalmali: cerezleri "yalniz https" isaretlemek
+    # duz http'de oturum acmayi imkansiz kilar, SSL yonlendirmesi de sonsuz
+    # donguye sokar.
+    HTTPS_ENABLED = env_flag('DJANGO_HTTPS', False)
+    SESSION_COOKIE_SECURE = HTTPS_ENABLED
+    CSRF_COOKIE_SECURE = HTTPS_ENABLED
+    SECURE_SSL_REDIRECT = HTTPS_ENABLED
+    SECURE_HSTS_SECONDS = 31536000 if HTTPS_ENABLED else 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = HTTPS_ENABLED
+    SECURE_HSTS_PRELOAD = HTTPS_ENABLED
