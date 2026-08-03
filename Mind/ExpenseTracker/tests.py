@@ -1,8 +1,10 @@
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection, transaction
 from django.test import TestCase
+from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.test.utils import CaptureQueriesContext
 
 from .models import Banks, Debts, Expense, ExpenseCategory
@@ -545,6 +547,54 @@ class CardStatementTestCase(TestCase):
         Banks.objects.create(user=other, name="Baskasinin Karti", logo="bank_logo/z.png")
         names = [c["name"] for c in self.client.get("/tracker/api/banks/summary/").json()]
         self.assertNotIn("Baskasinin Karti", names)
+
+
+class BankEditApiTestCase(TestCase):
+    """Var olan bir kartin limit/kesim gunu bilgisini duzenleme."""
+
+    def setUp(self):
+        self.user = AppUser.objects.create_user(username="ali", password="parola123")
+        self.card = Banks.objects.create(
+            user=self.user, name="Ziraat Bank", logo="bank_logo/x.png",
+        )
+        self.client.force_login(self.user)
+
+    def test_patch_sets_limit_and_statement_day(self):
+        response = self.client.patch(
+            f"/tracker/api/banks/{self.card.id}/",
+            data={"card_limit": "50000.00", "statement_day": 6},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.card_limit, Decimal("50000.00"))
+        self.assertEqual(self.card.statement_day, 6)
+
+    def test_blank_form_values_clear_the_fields(self):
+        """Duzenleme formu bos alani bos string olarak gonderir; bu null demek."""
+        self.card.card_limit = Decimal("50000.00")
+        self.card.statement_day = 6
+        self.card.save()
+
+        response = self.client.patch(
+            f"/tracker/api/banks/{self.card.id}/",
+            data=encode_multipart(BOUNDARY, {"name": "Ziraat Bank", "card_limit": "", "statement_day": ""}),
+            content_type=MULTIPART_CONTENT,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.card.refresh_from_db()
+        self.assertIsNone(self.card.card_limit)
+        self.assertIsNone(self.card.statement_day)
+
+    def test_cannot_edit_another_users_card(self):
+        other = AppUser.objects.create_user(username="veli", password="parola123")
+        foreign = Banks.objects.create(user=other, name="Baskasinin Karti", logo="bank_logo/z.png")
+        response = self.client.patch(
+            f"/tracker/api/banks/{foreign.id}/",
+            data={"card_limit": "1000.00"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 404)
 
 
 class PendingStatementDashboardTestCase(TestCase):

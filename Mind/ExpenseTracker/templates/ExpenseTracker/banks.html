@@ -51,7 +51,7 @@
 <div class="modal-overlay" id="bankModalOverlay">
     <div class="modal modal-sm" id="bankModal">
         <div class="modal-header">
-            <h2 class="modal-title">Banka Ekle</h2>
+            <h2 class="modal-title" id="bankModalTitle">Banka Ekle</h2>
             <button class="modal-close" id="closeBankModal">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -100,7 +100,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-outline" id="cancelBankBtn">İptal</button>
-            <button class="btn btn-primary" type="submit" form="bankForm">Bankayı Kaydet</button>
+            <button class="btn btn-primary" type="submit" form="bankForm" id="saveBankBtn">Bankayı Kaydet</button>
         </div>
     </div>
 </div>
@@ -125,6 +125,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const preview = document.getElementById('logoPreview');
     const banksGrid = document.querySelector('.banks-grid');
     const emptyState = document.getElementById('emptyState');
+    const modalTitle = document.getElementById('bankModalTitle');
+
+    // null: yeni banka ekleniyor. Sayi: o id'li banka duzenleniyor.
+    let editingId = null;
 
     // CSRF token
     function getCookie(name) {
@@ -149,17 +153,39 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.classList.add('active');
     }
 
+    function openCreateModal() {
+        editingId = null;
+        modalTitle.textContent = 'Banka Ekle';
+        submitBtn.textContent = 'Bankayı Kaydet';
+        openModal();
+    }
+
+    function openEditModal(bank) {
+        editingId = bank.id;
+        modalTitle.textContent = 'Bankayı Düzenle';
+        submitBtn.textContent = 'Değişiklikleri Kaydet';
+        document.getElementById('bankName').value = bank.name || '';
+        document.getElementById('bankCardLimit').value = bank.card_limit ?? '';
+        document.getElementById('bankStatementDay').value = bank.statement_day ?? '';
+        if (bank.logo) {
+            preview.innerHTML = `<img src="${escapeHtml(bank.logo)}" alt="">`;
+            preview.classList.add('has-preview');
+        }
+        openModal();
+    }
+
     function closeModal() {
         overlay.classList.remove('active');
         modal.classList.remove('active');
         form.reset();
         preview.innerHTML = '';
         preview.classList.remove('has-preview');
+        editingId = null;
     }
 
     // Event listeners for modal
     [addBtn, addCard, emptyAddBtn].forEach(el => {
-        if (el) el.addEventListener('click', openModal);
+        if (el) el.addEventListener('click', openCreateModal);
     });
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
@@ -211,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <span>Yeni Banka Ekle</span>
         `;
-        addCardEl.addEventListener('click', openModal);
+        addCardEl.addEventListener('click', openCreateModal);
         banksGrid.appendChild(addCardEl);
 
         // Bank cards
@@ -219,14 +245,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const card = document.createElement('div');
             card.className = 'bank-card';
             card.dataset.id = bank.id;
+            card.style.cursor = 'pointer';
+            card.title = 'Düzenlemek için tıklayın';
             const limitLine = bank.card_limit
-                ? `<span class="text-muted" style="font-size: 11px; margin-top: 6px;">Limit ${escapeHtml(fmtTRY(bank.card_limit))}</span>`
-                : '';
+                ? `Limit ${escapeHtml(fmtTRY(bank.card_limit))}`
+                : 'Limit tanımsız';
+            const dayLine = bank.statement_day
+                ? `Kesim ayın ${escapeHtml(String(bank.statement_day))}. günü`
+                : 'Kesim günü tanımsız';
             card.innerHTML = `
                 ${bank.logo ? `<img src="${escapeHtml(bank.logo)}" alt="" class="bank-logo">` : ''}
                 <span class="bank-name">${escapeHtml(bank.name)}</span>
-                ${limitLine}
+                <span class="text-muted" style="font-size: 11px; margin-top: 6px;">${limitLine}</span>
+                <span class="text-muted" style="font-size: 11px;">${dayLine}</span>
             `;
+            card.addEventListener('click', () => openEditModal(bank));
             banksGrid.appendChild(card);
         });
 
@@ -254,14 +287,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Create bank (POST)
-    async function createBank(formData) {
+    // Create (POST) / update (PATCH) bank
+    async function saveBank(formData) {
+        const isEdit = editingId !== null;
+        const previousLabel = submitBtn.textContent;
         try {
             submitBtn.disabled = true;
             submitBtn.textContent = 'Kaydediliyor...';
 
-            const response = await fetch(API_URL, {
-                method: 'POST',
+            const response = await fetch(isEdit ? `${API_URL}${editingId}/` : API_URL, {
+                method: isEdit ? 'PATCH' : 'POST',
                 headers: {
                     'X-CSRFToken': csrftoken
                 },
@@ -274,14 +309,17 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 const errorData = await response.json();
                 console.error('Error:', errorData);
-                alert(errorData.name?.[0] || errorData.detail || 'Bir hata oluştu');
+                alert(
+                    errorData.name?.[0] || errorData.card_limit?.[0] ||
+                    errorData.statement_day?.[0] || errorData.detail || 'Bir hata oluştu'
+                );
             }
         } catch (error) {
             console.error('Network error:', error);
             alert('Ağ hatası. Lütfen tekrar deneyin.');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Bankayı Kaydet';
+            submitBtn.textContent = previousLabel;
         }
     }
 
@@ -294,18 +332,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData();
         formData.append('name', name);
 
-        // Bos birakilan opsiyonel alanlari hic gondermiyoruz; bos string
-        // DecimalField/IntegerField dogrulamasindan gecmez.
         const cardLimit = document.getElementById('bankCardLimit').value.trim();
-        if (cardLimit) formData.append('card_limit', cardLimit);
-
         const statementDay = document.getElementById('bankStatementDay').value.trim();
-        if (statementDay) formData.append('statement_day', statementDay);
+
+        // Duzenlemede bos alan "temizle" demektir, o yuzden bos string de
+        // gonderilir (DRF bunu null'a cevirir). Yeni kayitta bos alani hic
+        // gondermeyip alanin varsayilanini birakiyoruz.
+        if (cardLimit || editingId !== null) formData.append('card_limit', cardLimit);
+        if (statementDay || editingId !== null) formData.append('statement_day', statementDay);
 
         if (fileInput.files[0]) {
             formData.append('logo', fileInput.files[0]);
         }
-        createBank(formData);
+        saveBank(formData);
     });
 
     // Load banks on page load
